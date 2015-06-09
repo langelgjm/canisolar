@@ -77,7 +77,11 @@ class Insolation(object):
         insolation.sort_index(inplace=True)
         return insolation
 
-#insolation_file = "/Users/gjm/insight/canisolar/data/us9809_latilt_updated/us9809_latilt_updated"
-insolation = Insolation()
-#insolation.populate(insolation_file)
-insolation.poly_find(-72.9211990, 41.3750700)
+def main():
+    #insolation_file = "/Users/gjm/insight/canisolar/data/us9809_latilt_updated/us9809_latilt_updated"
+    insolation = Insolation()
+    #insolation.populate(insolation_file)
+    insolation.poly_find(-72.9211990, 41.3750700)
+
+if __name__ == "__main__":
+    main()

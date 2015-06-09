@@ -12,6 +12,7 @@ import us
 import pymysql.cursors
 import csv
 from pymysql import DataError
+import pandas as pd
 
 mysql_url = "localhost"
 mysql_db = "openpv"
@@ -32,7 +33,7 @@ class OpenPV(object):
             user='root',
             passwd='',
             charset='utf8mb4',
-            cursorclass=pymysql.cursors.DictCursor)
+            cursorclass=pymysql.cursors.Cursor)
         # Create db (if it doesn't already exist)
         self.create_db()
         # Now reconnect using the specified db
@@ -41,7 +42,7 @@ class OpenPV(object):
             passwd='',
             db=self.db_name,
             charset='utf8mb4',
-            cursorclass=pymysql.cursors.DictCursor)
+            cursorclass=pymysql.cursors.Cursor)
         # Create tables (if they don't already exist)
         self.create_tables()
     def create_db(self):
@@ -85,18 +86,8 @@ class OpenPV(object):
         '''
         Download CSV files for all states. Will overwrite without warning.
         '''
-        for state in openpv.states:
+        for state in self.states:
             self.get_api_state_csv(state)
-    def select_item_id(self, game_id):
-        sql = '''SELECT id FROM item_data WHERE game_id = %s'''
-        with self.connection.cursor() as cursor:
-            cursor.execute(sql, game_id)
-            result = cursor.fetchone()
-            if result:
-                item_id = result['id']
-            else:
-                raise LookupError
-        return item_id
     def insert_item_data(self, zipcode, state, size, cost, date_installed):
         # if a variable is missing, it's an empty string; set that to None instead so that it becomes NULL in the db
         zipcode = zipcode if zipcode != '' else None
@@ -111,23 +102,49 @@ class OpenPV(object):
         #print(sql)
         with self.connection.cursor() as cursor:
             cursor.execute(sql, (zipcode, state, size, cost, date_installed))
-        self.connection.commit()    
+        self.connection.commit()
+    def get_installs(self, state):
+        sql = '''SELECT * FROM installs WHERE state = %s'''
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql, (state))
+        results = cursor.fetchall()
+        installs = pd.DataFrame(list(results), columns=['id', 'zipcode', 'state', 'size', 'cost', 'date_installed'])
+        return installs
+    def get_similar_installs(self, state, size):
+        '''
+        Return 'similar' installs based on state and size. Similar defined to be +/- 10%
+        '''
+        min_size = size * 0.90
+        max_size = size * 1.10
+        sql = '''SELECT * FROM installs WHERE state = %s AND size >= %s AND size <= %s'''
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql, (state, min_size, max_size))
+        results = cursor.fetchall()
+        # Need to  handles when there are no results
+        installs = pd.DataFrame(list(results), columns=['id', 'zipcode', 'state', 'size', 'cost', 'date_installed'])
+        return installs
+    def get_similar_installs_cost(self, state, size):
+        pass
     def close(self):
         self.connection.close()
 
-openpv = OpenPV(mysql_url, mysql_db)
+def main():
+    openpv = OpenPV(mysql_url, mysql_db)
+    
+    for filename in os.listdir(openpv_data_path):
+        if filename.endswith(".csv"):
+            with open(os.path.join(openpv_data_path, filename)) as csvfile:
+                reader = csv.reader(csvfile)
+                # skip the first line, which is a header
+                reader.__next__()
+                for row in reader:
+                    try:
+                        # Don't include the last two columns which are blank
+                        (zipcode, state, size, cost, date_installed) = row[:-2]
+                        openpv.insert_item_data(zipcode, state, size, cost, date_installed)
+                    except DataError:
+                        print(row)
+                        continue
 
-for filename in os.listdir(openpv_data_path):
-    if filename.endswith(".csv"):
-        with open(os.path.join(openpv_data_path, filename)) as csvfile:
-            reader = csv.reader(csvfile)
-            # skip the first line, which is a header
-            reader.__next__()
-            for row in reader:
-                try:
-                    # Don't include the last two columns which are blank
-                    (zipcode, state, size, cost, date_installed) = row[:-2]
-                    openpv.insert_item_data(zipcode, state, size, cost, date_installed)
-                except DataError:
-                    print(row)
-                    continue
+if __name__ == "__main__":
+    main()
