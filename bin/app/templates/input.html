@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Starter Template for Bootstrap</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="../static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../static/css/bootstrap-slider.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="starter-template.css" rel="stylesheet">
+    
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <script src="../../assets/js/ie-emulation-modes-warning.js"></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Project name</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+<br><br> 
+
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <script src="static/js/bootstrap-slider.js"></script>    
+
+
+    <div class="container">
+
+	<div class="starter-template">
+			<h2>Input Page</h2>
+			<p>Enter some user input</p>
+		</div>
+
+		<div class = "container">
+
+		<form class="form-horizontal"  action="/output" method="GET">
+		<fieldset>
+
+		<!-- Form Name -->
+		<legend>Can I Solar?</legend>
+
+		<!-- Text input-->
+		<div class="form-group">
+		  <label class="control-label" for="address">Address</label>
+		  <div class="controls">
+			<input id="address" name="address" placeholder="1600 Pennsylvania Avenue NW, Washington, DC 20500" class="input-xlarge" required="" type="text">
+	
+		  </div>
+		</div>
+
+		<!-- Text input-->
+		<div class="form-group">
+		  <label class="control-label" for="cost">Most Recent Bill</label>
+		  <div class="controls">
+			<input id="cost" name="cost" placeholder="$150" class="input-xlarge" required="" type="text">
+	
+		  </div>
+		</div>
+
+		<!-- Select Basic -->
+		<div class="form-group">
+		  <label class="control-label" for="month">Month of Bill</label>
+		  <div class="controls">
+			<select id="month" name="month" class="input-xlarge">
+			  <option value="1">January</option>
+			  <option value="2">February</option>
+			  <option value="3">March</option>
+			  <option value="4">April</option>
+			  <option value="5">May</option>
+			  <option value="6">June</option>
+			  <option value="7">July</option>
+			  <option value="8">August</option>
+			  <option value="9">September</option>
+			  <option value="10">October</option>
+			  <option value="11">November</option>
+			  <option value="12">December</option>
+			</select>
+		  </div>
+		</div>
+
+
+		<!-- Button -->
+		<div class="form-group">
+		  <label class="control-label" for="submit"></label>
+		  <div class="controls">
+			<button id="submit" name="submit" class="btn btn-primary">Submit</button>
+		  </div>
+		</div>
+
+		</fieldset>
+		</form>
+
+    </div>
+
+
+
+    </div><!-- /.container -->
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="../../dist/js/bootstrap.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
+  </body>
+</html>

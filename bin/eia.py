@@ -11,7 +11,6 @@ import requests
 import pandas as pd
 import pymysql
 
-#from geopy.geocoders import Nominatim
 mysql_url = "localhost"
 mysql_db = "eia"
 
@@ -67,20 +66,34 @@ class EIA_DB(object):
             price FLOAT
             )
             ENGINE=MyISAM'''
+        prices_auto_arima = '''CREATE TABLE IF NOT EXISTS retail_residential_prices_auto_arima (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+            state CHAR(2),
+            date DATE,
+            price FLOAT
+            )
+            ENGINE=MyISAM'''
+        prices_lin_reg = '''CREATE TABLE IF NOT EXISTS retail_residential_prices_lin_reg (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+            state CHAR(2),
+            date DATE,
+            price FLOAT
+            )
+            ENGINE=MyISAM'''
         with self.connection.cursor() as cursor:
-            cursor.execute(prices)
-            cursor.execute(consump)
-            cursor.execute(prices_predicted)
+            for sql in (prices, consump, prices_predicted, prices_auto_arima, prices_lin_reg):
+                cursor.execute(sql)
         self.connection.commit()        
     def insert_price(self, state, date, price):
         # if a variable is missing, it's an empty string; set that to None instead so that it becomes NULL in the db
         state = state if state != '' else None
-        date = date if date != '' else None
+        # we add the -01 to avoid illegal date strings that have day 00 in MySQL
+        date = date + '-01' if date != '' else None
         price = price if price != '' else None
         # note use of STR_TO_DATE to convert the date to the correct format
         # note also that the % for date formatting needs to be escaped
         sql = '''INSERT INTO retail_residential_prices (state, date, price) 
-            VALUES (%s, STR_TO_DATE(%s, '%%Y-%%m'), %s)'''
+            VALUES (%s, STR_TO_DATE(%s, '%%Y-%%m-%%d'), %s)'''
         #print(sql)
         with self.connection.cursor() as cursor:
             cursor.execute(sql, (state, date, price))
@@ -88,16 +101,31 @@ class EIA_DB(object):
     def insert_sale(self, state, date, sale):
         # if a variable is missing, it's an empty string; set that to None instead so that it becomes NULL in the db
         state = state if state != '' else None
-        date = date if date != '' else None
+        # we add the -01 to avoid illegal date strings that have day 00 in MySQL
+        date = date + '-01' if date != '' else None
         sale = sale if sale != '' else None
         # note use of STR_TO_DATE to convert the date to the correct format
         # note also that the % for date formatting needs to be escaped
         sql = '''INSERT INTO retail_residential_sales (state, date, sales) 
-            VALUES (%s, STR_TO_DATE(%s, '%%Y-%%m'), %s)'''
+            VALUES (%s, STR_TO_DATE(%s, '%%Y-%%m-%%d'), %s)'''
         #print(sql)
         with self.connection.cursor() as cursor:
             cursor.execute(sql, (state, date, sale))
-        self.connection.commit()        
+        self.connection.commit()
+    def get_price(self, month, state):
+        '''
+        Return a floating point value in DOLLARS per kWh for the most recent month argument and state
+        '''
+        sql = '''SELECT * FROM retail_residential_prices WHERE state = %s ORDER BY date DESC LIMIT 12;'''
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql, (state))
+        results = cursor.fetchall()
+        prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
+        # use month numbers as the new index
+        prices.index = prices['date'].apply(lambda i: i.month)
+        # Not working right now
+        dpkwh = float(prices.loc[month] / 100)
+        return dpkwh        
     def get_prices(self, state):
         sql = '''SELECT * FROM retail_residential_prices WHERE state = %s'''
         with self.connection.cursor() as cursor:
@@ -112,6 +140,30 @@ class EIA_DB(object):
         results = cursor.fetchall()
         prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
         return prices
+    def get_prices_lin_reg(self, state):
+        sql = '''SELECT * FROM retail_residential_prices_lin_reg WHERE state = %s'''
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql, (state))
+        results = cursor.fetchall()
+        prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
+        return prices
+    def get_prices_auto_arima(self, state):
+        sql = '''SELECT * FROM retail_residential_prices_auto_arima WHERE state = %s'''
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql, (state))
+        results = cursor.fetchall()
+        prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
+        return prices
+    def get_sales(self, state):
+        '''
+        Return a pandas DataFrame with year-month period index and millions of kWh values
+        '''
+        sql = '''SELECT * FROM retail_residential_sales WHERE state = %s'''
+        with self.connection.cursor() as cursor:
+            cursor.execute(sql, (state))
+        results = cursor.fetchall()
+        sales = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'sales'])
+        return sales
     def close(self):
         self.connection.close()
 
@@ -132,6 +184,9 @@ class EIA_API(object):
         
         self.retail_sales_resident_series_map = self.make_state_to_series_map(self.retail_sales_resident_cat)
         self.avg_retail_price_resident_series_map = self.make_state_to_series_map(self.avg_retail_price_resident_cat)
+        self.eia_db_url = "localhost"
+        self.eia_db_name = "eia"
+        self.eia_db = EIA_DB(self.eia_db_url, self.eia_db_name)
     def make_state_to_series_map(self, cat):
         '''
         Return a dictionary mapping state codes to series names for a given category

@@ -114,12 +114,13 @@ class OpenPV(object):
         '''
         Return 'similar' installs based on state and size. Similar defined to be +/- 10%
         '''
+        state = str(state)
         min_size = size * 0.90
         max_size = size * 1.10
         sql = '''SELECT * FROM installs WHERE state = %s AND size >= %s AND size <= %s'''
         with self.connection.cursor() as cursor:
-            cursor.execute(sql, (state, min_size, max_size))
-        results = cursor.fetchall()
+            cursor.execute(sql, (state, str(min_size), str(max_size)))
+            results = cursor.fetchall()
         # Need to  handles when there are no results
         installs = pd.DataFrame(list(results), columns=['id', 'zipcode', 'state', 'size', 'cost', 'date_installed'])
         return installs
