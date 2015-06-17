@@ -5,6 +5,7 @@ Created on Thu Jun  4 11:37:11 2015
 @author: gjm
 
 This file contains the Insolation class definition.
+The insolation data are obtained from http://www.nrel.gov/gis/data_solar.html
 """
 
 import shapefile
@@ -24,7 +25,7 @@ class Insolation(object):
         return self.db.insolation.count()
     def populate(self, file):
         '''
-        Populate MongoDB with entries consisting of a location (points comprising a polygon) and attributes (PV insolation data).
+        Populate MongoDB with entries consisting of a location (points comprising a polygon) and attributes (photovoltaic insolation data).
         '''
         sf = shapefile.Reader(file)
         # Records only include 15 entries, but there are 16 fields
@@ -61,15 +62,19 @@ class Insolation(object):
             } 
         })
         polys = [doc for doc in cursor]
+        if len(polys) < 1:
+            # If no polygons were found, we were probably passed a coordinate for which we don't have any data
+            print("ERROR: in Insolation.poly_find(): no matching polygons found; raising ValueError.")
+            raise ValueError
+        if len(polys) > 1:
+            print("WARNING: in Insolation.poly_find(): multiple matching polygons found; using the first.")
         return polys
     def get_insolation(self, lon, lat):
         '''
         Return a pandas DataFrame indexed by integers representing months (1-12), with insolation data in kWh / m2 / day as values
         '''
-        # When there are multiple matching polygons, use the first one, and print a warning.
+        # When there are multiple matching polygons, use the first one.
         data = self.poly_find(lon, lat)[0]
-        if len(data) > 1:
-            print("WARNING: in Insolation.get_insolation(): multiple matching polygons found; using the first.")
         timestamps = []
         values = []
         for key in data['attributes'].keys():

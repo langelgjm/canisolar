@@ -116,22 +116,27 @@ class EIA_DB(object):
         '''
         Return a floating point value in DOLLARS per kWh for the most recent month argument and state
         '''
-        sql = '''SELECT * FROM retail_residential_prices WHERE state = %s ORDER BY date DESC LIMIT 12;'''
+        sql = '''SELECT * FROM retail_residential_prices WHERE state = %s ORDER BY date DESC LIMIT 12'''
         with self.connection.cursor() as cursor:
             cursor.execute(sql, (state))
         results = cursor.fetchall()
         prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
         # use month numbers as the new index
         prices.index = prices['date'].apply(lambda i: i.month)
-        # Not working right now
-        dpkwh = float(prices.loc[month] / 100)
+        dpkwh = prices.loc[month]['price'] / 100
         return dpkwh        
-    def get_prices(self, state):
-        sql = '''SELECT * FROM retail_residential_prices WHERE state = %s'''
+    def get_prices(self, state, periods=12):
+        '''
+        Return a pandas DataFrame with year-month period index and cents per kWh values
+        '''        
+        sql = '''SELECT * FROM retail_residential_prices WHERE state = %s ORDER BY date DESC LIMIT %s'''
         with self.connection.cursor() as cursor:
-            cursor.execute(sql, (state))
+            cursor.execute(sql, (state, periods))
         results = cursor.fetchall()
-        prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
+        timestamps = [i for i in zip(*results)][2]
+        periods = pd.to_datetime(pd.Series(timestamps)).dt.to_period(freq='M')
+        values = [i for i in zip(*results)][3]
+        prices = pd.DataFrame(list(values), index=periods, columns=['cpkWh'])
         return prices
     def get_predicted_prices(self, state):
         sql = '''SELECT * FROM retail_residential_prices_predicted WHERE state = %s'''
@@ -154,16 +159,46 @@ class EIA_DB(object):
         results = cursor.fetchall()
         prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
         return prices
-    def get_sales(self, state):
+    def get_consump(self, state, periods):
         '''
         Return a pandas DataFrame with year-month period index and millions of kWh values
         '''
-        sql = '''SELECT * FROM retail_residential_sales WHERE state = %s'''
+        sql = '''SELECT * FROM retail_residential_sales WHERE state = %s ORDER BY date DESC LIMIT %s'''
         with self.connection.cursor() as cursor:
-            cursor.execute(sql, (state))
+            cursor.execute(sql, (state, periods))
         results = cursor.fetchall()
-        sales = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'sales'])
+        timestamps = [i for i in zip(*results)][2]
+        periods = pd.to_datetime(pd.Series(timestamps)).dt.to_period(freq='M')
+        values = [i for i in zip(*results)][3]
+        sales = pd.DataFrame(list(values), index=periods, columns=['mkWh'])
         return sales
+    def get_avg_monthly_consump(self, state, periods=60):
+        '''
+        Return the monthly average of an arbitrary length series of year-month state consumption data
+        '''
+        consump = self.get_consump(state, periods)
+        # groupby will return index labels as the new index
+        avg_monthly_consump = consump.groupby(consump.index.month).mean()
+        return(avg_monthly_consump)
+    def est_monthly_consump(self, month, cost, state):
+        '''
+        Estimate an individual's consumption in kWh for a given month, cost in dollars, and state
+        Return a floating point value in kWh
+        '''
+        price = self.get_price(month, state)
+        consump = cost / price
+        return consump
+    def est_annual_consump(self, month, consump, state):
+        '''
+        Estimate an individual's yearly consumption in kWh by month, based on one given month's consumption and state
+        Return a pandas DataFrame with month period index and kWh values; pass month as int, consump as kWh
+        '''
+        avg_monthly_consump = self.get_avg_monthly_consump(state)
+        multiplier = float(consump / avg_monthly_consump.loc[month])
+        consump = pd.DataFrame(avg_monthly_consump.values * multiplier, 
+                                             index = avg_monthly_consump.index, 
+                                             columns = ['kWh'])
+        return consump        
     def close(self):
         self.connection.close()
 
@@ -296,29 +331,6 @@ class EIA_API(object):
                 # The explicit str() cast on the price was necessary, unclear why
                 eia_db.insert_sale(state, str(row[0]), str(row[1][0]))
             eia_db.connection.commit()
-
-class NREL_Utility_Rates_API(object):
-    '''
-    Rate-limited to 1,000 requests / hour. Most recent data is from 2012.
-    '''
-    def __init__(self):
-        self.api_key = open("nrel_api_key.txt", "r").readline().rstrip()
-        self.url = "http://developer.nrel.gov/api/utility_rates/v3.json"
-    def get(self, lat, lon):
-        '''
-        What should this return, exactly? Can there be multiple providers? (YES)
-        '''
-        # Introduce bounds checking for latitude/longitude
-        param_dict = {"api_key": self.api_key, "lat": lat, "lon": lon}
-        r = requests.get(self.url, params=param_dict)
-        return r.json()
-    def get_resident_rate(self, lat, lon):
-        '''
-        For now, just return the first rate? Later, add in utility selection feature to client side?
-        '''
-        json = self.get(lat, lon)
-        rate = json['outputs']['residential']
-        return rate
 
 def main():
     pass

@@ -1,27 +1,21 @@
-
-# coding: utf-8
-
-# In[48]:
-
-
+# -*- coding: utf-8 -*-
 """
 Created on Mon Jun  8 09:25:39 2015
 
 @author: gjm
 """
 
-# Setup
-#get_ipython().magic('matplotlib inline')
 import os
 os.chdir("/Users/gjm/insight/canisolar/bin")
 from insolation import Insolation
-from eia import EIA_API, EIA_DB
+from eia import EIA_DB
 import calendar
 import numpy as np
 import pandas as pd
 from openpv import OpenPV
 from geopy.geocoders import GoogleV3
 import rpy2.robjects as ro
+import json
 
 month_lengths = [calendar.monthrange(2015,i)[1] for i in range(1,13)]
 mysql_url = "localhost"
@@ -36,7 +30,7 @@ eia_db_name = "eia"
 #state = 'MD' # will eventually be derived from coordinates
 #cost = 500
 #month = 8 # May
-efficiency = 0.15
+#efficiency = 0.15
 # Should also include a derating constant, maybe 0.75 or something
 # FYI EIA prices are nominal, not real, unless stated otherwise
 
@@ -49,7 +43,7 @@ class RPredict(object):
         Return cost in dollars based on a pre-calculated multilevel model in R
         '''
         # What does it mean to not include random effects here?
-        cost = ro.r('''exp(predict(mod_ml_2, newdata=data.frame(state='{state}', size={size}), re.form=NA))'''.format(state=state, size=size))        
+        cost = ro.r('''exp(predict(mod_ml_varslope_nested_year_state, newdata=data.frame(state='{state}', size={size}), re.form=NA))'''.format(state=state, size=size))        
         return cost[0]
 
 rpredict = RPredict("/Users/gjm/insight/canisolar/data/openpv_analysis/openpv_model.Robj")
@@ -61,21 +55,21 @@ class SolarUser(object):
         self.state = state
         self.cost = cost
         self.month = month
-        self.efficiency = efficiency
+        #self.efficiency = efficiency
         self.Insolation = Insolation()
         self.insolation = self.Insolation.get_insolation(self.lon, self.lat)
-        self.EIA = EIA_API()
+        #self.EIA = EIA_API()
         self.EIA_DB = EIA_DB(eia_db_url, eia_db_name)
-        self.prices = self.EIA.get_prices(self.state, periods=12)
+        self.prices = self.EIA_DB.get_prices(self.state, periods=12)
         # get month of index, set as new index
         self.prices.index = self.prices.index.month
         # sort so that we Jan - Dec in order
         self.prices.sort_index(inplace=True)
-        self.consumption =  self.EIA.est_monthly_consump(self.month, self.cost, self.state)
-        self.annual_consumption = self.EIA.est_annual_consump(self.month, self.consumption, self.state)
+        self.consumption =  self.EIA_DB.est_monthly_consump(self.month, self.cost, self.state)
+        self.annual_consumption = self.EIA_DB.est_annual_consump(self.month, self.consumption, self.state)
         self.total_consumption = self.annual_consumption['kWh'].sum()
         self.OpenPV = OpenPV(mysql_url, mysql_db)
-    def get_req_area(self, ann_demand_met=0.50):
+    def get_req_area(self, ann_demand_met=0.50, efficiency=0.15):
         '''
         Return the required area (in m^2) of an installation that would meet the proportion of a SolarUser's 
         annual consumption specified by ann_demand_met.
@@ -83,7 +77,7 @@ class SolarUser(object):
         kwh_req_per_year = self.total_consumption * ann_demand_met
         print("kWH required per year:", kwh_req_per_year)
         # A 1 m^2 panel would produce this many kWh per year
-        kwh_prod_per_year_per_m2 = (self.insolation['kWhpm2'] * self.efficiency * np.array(month_lengths)).sum()
+        kwh_prod_per_year_per_m2 = (self.insolation['kWhpm2'] * efficiency * np.array(month_lengths)).sum()
         print("kWh produced by a 1 m^2 panel per year:", kwh_prod_per_year_per_m2)        
         # So we need this many m^2:
         m2 = kwh_req_per_year / kwh_prod_per_year_per_m2
@@ -104,33 +98,9 @@ class SolarUser(object):
         nominal_kw_req = actual_kw_req / derate
         print("Nominal (derated) system size required (kW):", nominal_kw_req)
         return nominal_kw_req
-    def get_cost_per_watt(self, cap):
-        '''
-        Return a cost estimate (in $ per W) for a system of specified capacity cap.
-        Right now just taking the mean, should order by date and take most recent.
-        Also should deal with lack of data.
-        '''
-        installs = self.OpenPV.get_similar_installs(self.state, cap)
-        # Filter to installs within +/- 1 kW of specified capacity, and that have both size and cost
-        #installs = installs[(installs['size'] >= cap - 1) & (installs['size'] <= cap + 1)]
-        # Remove any that don't have cost info
-        installs = installs[installs['cost'].notnull()]
-        print("Number of similar installs:", len(installs))
-        cost_per_watt = installs['cost'] / (installs['size'] * 1000)
-        cost = cost_per_watt.mean()
-        print("Mean cost per watt of similar installs:", cost)
-        return cost
-    def get_cost(self, cap):
-        '''
-        Return a cost estimate (in $) for a system of specified capacity cap.
-        '''
-        cost_per_watt = self.get_cost_per_watt(cap)
-        cost = cap * 1000 * cost_per_watt
-        print("Estimated cost of this install:", cost)
-        return cost
     def get_cost_modeled(self, cap):
         '''
-        Return a cost estimate (in $) for a system of specified capacity cap using a model.
+        Return a cost estimate (in dollars) for a system of specified capacity cap using a model.
         '''
         cost = rpredict.predict(self.state, cap)
         print("Estimated cost of this install:", cost)
@@ -169,7 +139,6 @@ class SolarUser(object):
         '''
         Return break even time, in years, using constant prices. Obviously needs lots of work.
         '''
-        #cost = self.get_cost(cap)
         cost = self.get_cost_modeled(cap)
         savings = self.est_savings(ann_demand_met)
         print("Breakeven (constant prices, years):", cost/savings)
@@ -178,9 +147,11 @@ class SolarUser(object):
         '''
         Return break even time, in years. Uses forecasted prices.
         '''
-        #cost = self.get_cost(cap)
         cost = self.get_cost_modeled(cap)
-        remaining_cost = cost
+        # Temporary, to account for 30% federal tax credit
+        net_cost = cost * 0.70
+        print("Cost after Federal Tax Credit:", net_cost)
+        remaining_cost = net_cost
         savings = self.est_savings_forecasted(ann_demand_met)
         # The column header is is wrong, fix later
         savings_list = savings['kWh'].values.tolist()
@@ -208,36 +179,54 @@ def geocode(address):
     for i in location.raw['address_components']:
         if 'administrative_area_level_1' in i['types']:
             state = i['short_name']
-    loc = {'lon': lon, 'lat': lat, 'state': state}
+        if 'postal_code' in i['types']:
+            zipcode = i['short_name']
+    loc = {'lon': lon, 'lat': lat, 'state': state, 'zipcode': zipcode}
     print('state:', state)
     return loc
 
 
-def from_web(address, cost, month, slider_val=0.50):        
+def from_web(address, cost, month, slider_val=0.50, efficiency_slider_val=0.15):        
     loc = geocode(address)    
-    user = SolarUser(loc['lon'], loc['lat'], loc['state'], cost, month)
+    # Inconsistent behavior here: either pass all args to Solar User or not.
+    user = SolarUser(loc['lon'], loc['lat'], loc['state'], cost, month, efficiency_slider_val)
     my_cap = user.get_req_cap(ann_demand_met=slider_val)
-    #install_cost = user.get_cost(my_cap)
+    my_area = user.get_req_area(ann_demand_met=slider_val, efficiency=efficiency_slider_val)
     install_cost = user.get_cost_modeled(my_cap)
     breakeven_constant = user.est_break_even(my_cap, ann_demand_met=slider_val)
     breakeven = user.est_break_even_forecasted(my_cap, ann_demand_met=slider_val)
     
     # Extra stuff
-    annual_consumption = user.EIA.est_annual_consump(month, cost, loc['state'])    
+    annual_consumption = user.EIA_DB.est_annual_consump(month, cost, loc['state'])    
     print("Annual consumption:", annual_consumption)
     annual_insolation = user.insolation
     print("Annual insolation:", annual_insolation)
+    
+    def dict_to_pairs(mydict):
+        pairs = []
+        for k in [str(i) for i in list(range(1,13))]:
+            pairs.append([int(k), mydict[k]])
+        return pairs
+    
+    annual_consumption_list = dict_to_pairs(json.loads(annual_consumption.to_json())['kWh'])
+    annual_insolation_list = dict_to_pairs(json.loads(annual_insolation.to_json())['kWhpm2'])    
+    
+    # Note the default lambda function - this allows us to serialize pandas dataframes with json.dumps
+    dict1 = {'key': 'Consumption', 'bar': True, 'color': "#ccf", 'values': annual_consumption_list}
+    dict2 = {'key': 'Insolation', 'bar': False, 'color': "#333", 'values': annual_insolation_list}    
+    graph_data = [dict1, dict2]
+    # Note that the lambda function won't be necessary if we call to_json prior
+    # indent=4 causing "unterminated string literal" error in JS
+    graph_json = json.dumps(graph_data, default=lambda df: json.loads(df.to_json()))
     
     result = {'nominal_capacity': my_cap, 
               'install_cost': install_cost, 
               'install_cost_formatted': "{:,}".format(round(install_cost)),
               'breakeven': breakeven,
               'breakeven_constant': breakeven_constant,
+              'area_required': my_area,
               'loc': loc,
-              'annual_consumption': annual_consumption,
-              'annual_consumption_json': annual_consumption.to_json(),
-              'annual_insolation': annual_insolation,
-              'annual_insolation_json': annual_insolation.to_json()
+              'graph_json': graph_json
               }
     return result
 

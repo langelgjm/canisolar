@@ -115,11 +115,13 @@ class OpenPV(object):
         Return a pandas DataFrame of installs, optionally for a given state.
         '''
         if state:
-            sql = '''SELECT * FROM installs WHERE state = %s'''
+            #sql = '''SELECT * FROM installs WHERE state = %s AND size IS NOT NULL AND cost IS NOT NULL AND size > 0 AND cost > 0 AND date_installed IS NOT NULL'''
+            sql = '''SELECT * FROM installs WHERE state = %s AND size > 0 AND cost > 0 AND date_installed >= '2000-01-01'  AND date_installed < '2015-06-01' ORDER BY state, date_installed ASC'''
             with self.connection.cursor() as cursor:
                 cursor.execute(sql, (state))
         else:
-            sql = '''SELECT * FROM installs'''
+            #sql = '''SELECT * FROM installs WHERE size IS NOT NULL AND cost IS NOT NULL AND size > 0 AND cost > 0 AND date_installed IS NOT NULL'''
+            sql = '''SELECT * FROM installs WHERE size > 0 AND cost > 0 AND date_installed >= '2000-01-01'  AND date_installed < '2015-06-01' ORDER BY state, date_installed ASC'''
             with self.connection.cursor() as cursor:
                 cursor.execute(sql)            
         results = cursor.fetchall()

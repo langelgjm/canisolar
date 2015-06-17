@@ -33,29 +33,38 @@ def canisolar_output():
     else:
         slider_val = 0.50
 
+    if request.args.get('efficiency'):
+        efficiency_slider_val = float(request.args.get('efficiency'))
+        print("HTML5 Efficiency Slider Value:", efficiency_slider_val)
+    else:
+        efficiency_slider_val = 0.15
+
     
-    result = mvp.from_web(address, cost, month, slider_val)
+    result = mvp.from_web(address, cost, month, slider_val, efficiency_slider_val)
     
-    chart = lineChart(name="lineChart", x_is_date=False)
+    #chart = lineChart(name="lineChart", x_is_date=False)
     
-    xdata = range(1,13)
+    #xdata = range(1,13)
     # Convert to 10s of kWh for ease of plotting right now on a single axis
-    consumption = [i / 10 for i in result['annual_consumption']['kWh'].tolist()]
-    insolation = result['annual_insolation']['kWhpm2'].tolist()
+    #consumption = [i / 10 for i in result['annual_consumption']['kWh'].tolist()]
+    #insolation = result['annual_insolation']['kWhpm2'].tolist()
     
     #extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"}}
-    chart.add_serie(y=consumption, x=xdata, name='Consumption (10s of kWh)')
+    #chart.add_serie(y=consumption, x=xdata, name='Consumption (10s of kWh)')
     #extra_serie = {"tooltip": {"y_start": "", "y_end": " min"}}
-    chart.add_serie(y=insolation, x=xdata, name='Insolation (mean kWh / m^2 / day)')
-    chart.set_graph_width(1000)
-    chart.buildhtml()
+    #chart.add_serie(y=insolation, x=xdata, name='Insolation (mean kWh / m^2 / day)')
+    #chart.set_graph_width(1000)
+    #chart.buildhtml()
 
     #output_file = open('/Users/gjm/insight/canisolar/bin/app/templates/test-nvd3.html', 'w')
     #output_file.write(chart.htmlcontent)
     print(address)
+    
+    print(result['graph_json'])
 
     return render_template("output.html", address = address,
                            cost = cost,
                            month = month,
                            slider_val = slider_val, 
-                           result = result, chart_html = Markup(chart.htmlcontent))
+                           efficiency_slider_val = efficiency_slider_val, 
+                           result = result)
