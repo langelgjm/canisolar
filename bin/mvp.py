@@ -14,39 +14,18 @@ import numpy as np
 import pandas as pd
 from openpv import OpenPV
 from geopy.geocoders import GoogleV3
-import rpy2.robjects as ro
 import json
+from r import R
+import datetime
 
 month_lengths = [calendar.monthrange(2015,i)[1] for i in range(1,13)]
 mysql_url = "localhost"
 mysql_db = "openpv"
-
 eia_db_url = "localhost"
 eia_db_name = "eia"
 
-# Input coordinates, cost, and month of cost figure
-#lon = -76.9413576
-#lat = 38.9873326
-#state = 'MD' # will eventually be derived from coordinates
-#cost = 500
-#month = 8 # May
-#efficiency = 0.15
-# Should also include a derating constant, maybe 0.75 or something
-# FYI EIA prices are nominal, not real, unless stated otherwise
-
-class RPredict(object):
-    def __init__(self, model_path):
-        self.model_path = model_path
-        ro.r.load(self.model_path)
-    def predict(self, state, size):
-        '''
-        Return cost in dollars based on a pre-calculated multilevel model in R
-        '''
-        # What does it mean to not include random effects here?
-        cost = ro.r('''exp(predict(mod_ml_varslope_nested_year_state, newdata=data.frame(state='{state}', size={size}), re.form=NA))'''.format(state=state, size=size))        
-        return cost[0]
-
-rpredict = RPredict("/Users/gjm/insight/canisolar/data/openpv_analysis/openpv_model.Robj")
+# We load this once at the beginning, because the models are large
+myr = R("/Users/gjm/insight/canisolar/bin/models")
 
 class SolarUser(object):
     def __init__(self, lon, lat, state, cost, month, efficiency=0.15):
@@ -102,7 +81,7 @@ class SolarUser(object):
         '''
         Return a cost estimate (in dollars) for a system of specified capacity cap using a model.
         '''
-        cost = rpredict.predict(self.state, cap)
+        cost = myr.predict_cost(self.state, cap)
         print("Estimated cost of this install:", cost)
         return cost        
     def est_savings(self, ann_demand_met=0.50):
@@ -135,6 +114,32 @@ class SolarUser(object):
         savings = future_costs_before - future_costs_after
         #return savings.sum()
         return savings
+    def est_savings_forecasted_modeled(self, ann_demand_met=0.50):
+        '''
+        Return an estimate of savings (in $) over the course of a year, given a proportion of annual demand met.
+        This methode uses forecasted prices.
+        '''
+        # We only get 30 years of prices; thus if that's not enough we have to deal with the fact and let the user know
+        prices_forecasted = myr.predict_prices(self.state, 360)
+        # temporary fix; move this to the R class?
+        #prices_forecasted = pd.DataFrame(list(prices_forecasted), index=pd.date_range('2015-04', periods=360, freq='MS'), columns=["price"])
+        prices_forecasted = pd.DataFrame(list(prices_forecasted), columns=["price"])
+        #print(prices_forecasted)
+        # Repeat the 12-month consumption series 30 times
+        future_consump = pd.concat([self.annual_consumption]*30, ignore_index=True)
+        #future_consump.index = pd.date_range('2015-04', periods=360, freq='MS')
+        # Divide by 100 to turn cpkWh into dollars per kWh; match on index
+        future_costs_before = future_consump.mul(prices_forecasted['price'] / 100, axis='index')
+        #cost_before = (self.prices['cpkWh'] / 100) * self.annual_consumption['kWh']
+        kwh_prod_per_year = self.annual_consumption * ann_demand_met
+        # Repeat the 12-month consumption series 30 times
+        future_production = pd.concat([kwh_prod_per_year]*30, ignore_index=True)        
+        future_costs_after = future_costs_before['kWh'] - future_production['kWh'].mul(prices_forecasted['price'] / 100, axis='index')
+        #cost_after =  cost_before - ((self.prices['cpkWh'] / 100) * kwh_prod_per_year['kWh'])
+        # The column name here is wrong, tofix
+        savings = future_costs_before['kWh'] - future_costs_after
+        #return savings.sum()
+        return savings        
     def est_break_even(self, cap, ann_demand_met=0.50):
         '''
         Return break even time, in years, using constant prices. Obviously needs lots of work.
@@ -152,20 +157,40 @@ class SolarUser(object):
         net_cost = cost * 0.70
         print("Cost after Federal Tax Credit:", net_cost)
         remaining_cost = net_cost
-        savings = self.est_savings_forecasted(ann_demand_met)
+        #savings = self.est_savings_forecasted(ann_demand_met)
+        savings = self.est_savings_forecasted_modeled(ann_demand_met)        
         # The column header is is wrong, fix later
-        savings_list = savings['kWh'].values.tolist()
+        #savings_list = savings['kWh'].values.tolist()
+        savings_list = savings.values.tolist()
+        #print(savings_list)
         for m, val in enumerate(savings_list):
             remaining_cost = remaining_cost - savings_list[m]
             if remaining_cost <= 0:
                 # Add 1 because indices begin at 0
-                print("Breakeven (forecasted prices, years):", (m + 1) / 12)            
+                print("Breakeven (forecasted prices, years):", (m + 1) / 12)
                 return (m + 1) / 12
         if remaining_cost > 0:
-            print("Breakeven time greater than 60 years, switching to constant pricing.")
+            print("WARNING: Breakeven time greater than 30 years; returning sentinel value -1")
             # When break even time is longer than 30 years (i.e., forecasted savings are exhausted), 
             # return a static, linear estimate instead
-            self.est_break_even(cap)
+            return -1
+    def remaining_cost_vs_future_prices(self, install_cost, ann_demand_met=0.5):
+        '''
+        Return a dictionary with two items: a list of remaining cost by month, and a list of future_prices (beginning at April 2015)
+        '''
+        # Temporary, to account for 30% federal tax credit
+        net_cost = install_cost * 0.70        
+        future_prices = list(myr.predict_prices(self.state, 360))
+        remaining_cost = []
+        savings_list = self.est_savings_forecasted_modeled(ann_demand_met).values.tolist()
+        for m, val in enumerate(savings_list):
+            if net_cost <= 0:
+                remaining_cost.append(0)
+            else:
+                remaining_cost.append(net_cost)
+                net_cost = net_cost - savings_list[m]
+        result = {'remaining_cost': remaining_cost, 'future_prices': future_prices}
+        return result
 
 def geocode(address):
     geolocator = GoogleV3()
@@ -176,12 +201,20 @@ def geocode(address):
     print('latitude:', lat)
     
     # Not the best way to get the state, but ok for now
+    # Also make sure these are defined up front just in case they don't exist in the location.raw
+    state = 'NA'
+    state_name = 'NA'
+    zipcode = '0000'
+    locality = 'NA'
     for i in location.raw['address_components']:
         if 'administrative_area_level_1' in i['types']:
             state = i['short_name']
+            state_name = i['long_name']
         if 'postal_code' in i['types']:
             zipcode = i['short_name']
-    loc = {'lon': lon, 'lat': lat, 'state': state, 'zipcode': zipcode}
+        if 'locality' in i['types']:
+            locality = i['short_name']
+    loc = {'lon': lon, 'lat': lat, 'locality': locality, 'state': state, 'state_name': state_name, 'zipcode': zipcode}
     print('state:', state)
     return loc
 
@@ -196,37 +229,85 @@ def from_web(address, cost, month, slider_val=0.50, efficiency_slider_val=0.15):
     breakeven_constant = user.est_break_even(my_cap, ann_demand_met=slider_val)
     breakeven = user.est_break_even_forecasted(my_cap, ann_demand_met=slider_val)
     
-    # Extra stuff
-    annual_consumption = user.EIA_DB.est_annual_consump(month, cost, loc['state'])    
-    print("Annual consumption:", annual_consumption)
-    annual_insolation = user.insolation
-    print("Annual insolation:", annual_insolation)
-    
-    def dict_to_pairs(mydict):
+    def dict_to_dict_pairs(mydict):
         pairs = []
         for k in [str(i) for i in list(range(1,13))]:
-            pairs.append([int(k), mydict[k]])
+            pairs.append({'x': datetime.datetime(2015, int(k), 1).timestamp() * 1000, 'y':mydict[k]})
         return pairs
     
-    annual_consumption_list = dict_to_pairs(json.loads(annual_consumption.to_json())['kWh'])
-    annual_insolation_list = dict_to_pairs(json.loads(annual_insolation.to_json())['kWhpm2'])    
+    def list_to_dict_pairs_dates(mylist):
+        pairs = []
+        for i, v in enumerate(mylist):
+            #pairs.append({'x': i, 'y': v})
+            year = 2015
+            month = 4
+            if i % 12 <= (12 - month) and not i <= 9:
+                months = i % 12 + 4
+                years = i // 12 + year
+            else:
+                if i >= 9:
+                    months = i % 12 + 4 - 12
+                    years = i // 12 + year + 1            
+                else:
+                    months = i + 4
+                    years = i // 12 + year
+            #print(years,months)
+            pairs.append({'x': datetime.datetime(years, months, 1).timestamp() * 1000, 'y': v})
+        return pairs
+
+    # New stuff for second graph)
+    cost_vs_price_dict = user.remaining_cost_vs_future_prices(install_cost, ann_demand_met=slider_val)
+    graph2_y2_max = round(max(cost_vs_price_dict['future_prices'])) + 1
+    graph2_y1_max = round(max(cost_vs_price_dict['remaining_cost']))
+    
+    cost_vs_price_graph_data = [{'values': list_to_dict_pairs_dates(cost_vs_price_dict['remaining_cost']),
+                                 'key': 'Unrecovered installation costs',
+                                 'color': '#b2df8a',
+                                 'area': True},
+                                 {'values': list_to_dict_pairs_dates(cost_vs_price_dict['future_prices']),
+                                  'key': 'Electricity cost, cents per kWh',
+                                  'color': "#333"}]
+    cost_vs_price_graph_json = json.dumps(cost_vs_price_graph_data)
+    
+    # Extra stuff
+    annual_consumption = user.EIA_DB.est_annual_consump(month, cost, loc['state']) 
+    graph1_y1_max = round(annual_consumption.max()['kWh']) + 1
+    print("Annual consumption:", annual_consumption)
+    annual_insolation = user.insolation
+    graph1_y2_max = round(annual_insolation.max()['kWhpm2']) + 1
+    print("Annual insolation:", annual_insolation)
+        
+    annual_consumption_list = dict_to_dict_pairs(json.loads(annual_consumption.to_json())['kWh'])
+    annual_insolation_list = dict_to_dict_pairs(json.loads(annual_insolation.to_json())['kWhpm2'])    
     
     # Note the default lambda function - this allows us to serialize pandas dataframes with json.dumps
-    dict1 = {'key': 'Consumption', 'bar': True, 'color': "#ccf", 'values': annual_consumption_list}
-    dict2 = {'key': 'Insolation', 'bar': False, 'color': "#333", 'values': annual_insolation_list}    
+    dict1 = {'key': 'Your electricity consumption', 'color': "#ccf", 'values': annual_consumption_list}
+    dict2 = {'key': ''.join(['Solar hours in ', loc['locality'], ', ', loc['state']]), 'color': "#333", 'values': annual_insolation_list}    
     graph_data = [dict1, dict2]
     # Note that the lambda function won't be necessary if we call to_json prior
     # indent=4 causing "unterminated string literal" error in JS
-    graph_json = json.dumps(graph_data, default=lambda df: json.loads(df.to_json()))
+    #graph_json = json.dumps(graph_data, default=lambda df: json.loads(df.to_json()))
+    graph_json = json.dumps(graph_data)
+    
+    if breakeven == -1:
+        breakeven_formatted = "More than 30 years"
+    else:
+        breakeven_formatted = str(int(round(breakeven))) + ' years'
     
     result = {'nominal_capacity': my_cap, 
               'install_cost': install_cost, 
               'install_cost_formatted': "{:,}".format(round(install_cost)),
               'breakeven': breakeven,
+              'breakeven_formatted': breakeven_formatted,
               'breakeven_constant': breakeven_constant,
               'area_required': my_area,
               'loc': loc,
-              'graph_json': graph_json
+              'graph_json': graph_json,
+              'graph1_y1_max': graph1_y1_max,
+              'graph1_y2_max': graph1_y2_max,
+              'graph2_y1_max': graph2_y1_max,
+              'graph2_y2_max': graph2_y2_max,
+              'graph2_json': cost_vs_price_graph_json
               }
     return result
 

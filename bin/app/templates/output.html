@@ -110,18 +110,56 @@
 		</script>		
 
 		<div class="form-group">
-			<label class="control-label" for="ann_demand_met">Percentage of Consumption to Meet with Solar Power</label>
+			<label class="control-label" for="ann_demand_met">Percentage of Consumption Supplied by Solar Power: <span id="slider1_span">{{slider_val * 100 | round| int}}%</span></label>
 			<div class="controls">
-				<input id="ann_demand_met" type="range" name="ann_demand_met" style="width: 400px; height: 20px;" onmouseup="slider_mouseUp()" min="0.0" max="1.00" step="0.01" value="{{slider_val}}">
+				<table>
+				<tr>
+				<td>0%</td>
+				<td>
+				<input id="ann_demand_met" type="range" name="ann_demand_met" style="width: 400px; height: 20px;" oninput="slider1_input(this.value)" onmouseup="slider_mouseUp()" min="0.0" max="1.00" step="0.01" value="{{slider_val}}">
+				</td>
+				<td>100%</td>
+				</tr>
+				</table>
 			</div>
 		</div>
 
 		<div class="form-group">
-			<label class="control-label" for="ann_demand_met">Efficiency of Solar Panels</label>
+			<label class="control-label" for="ann_demand_met">Panel Efficiency: <span id="slider2_span">{{efficiency_slider_val * 100 | round | int}}%</span></label>
 			<div class="controls">
-				<input id="efficiency" type="range" name="efficiency" style="width: 400px; height: 20px;" onmouseup="slider_mouseUp()" min="0.15" max="0.20" step="0.01" value="{{efficiency_slider_val}}">
+				<table>
+				<tr>
+				<td>15%</td>
+				<td>
+				<input id="efficiency" type="range" name="efficiency" style="width: 400px; height: 20px;" oninput="slider2_input(this.value)" onmouseup="slider_mouseUp()" min="0.15" max="0.20" step="0.01" value="{{efficiency_slider_val}}">
+				</td>
+				<td>20%</td>
+				</tr>
+				</table>				
 			</div>
 		</div>
+
+		<!-- Script to update slider value-->
+		<script>
+			function slider1_input(val) {
+				var el = document.getElementById("slider1_span");
+				val = Math.floor(val * 100);
+				val = val.toString();
+				val = val.concat('%')				
+				el.innerHTML = val;
+			}
+		</script>
+
+		<!-- Script to update slider value-->
+		<script>
+			function slider2_input(val) {
+				var el = document.getElementById("slider2_span");
+				val = Math.floor(val * 100);
+				val = val.toString();
+				val = val.concat('%')
+				el.innerHTML = val;
+			}			
+		</script>
 
 		<!-- Script to resubmit the form when a slider is moved -->
 		<script>
@@ -152,8 +190,15 @@
       -->
 
       <table class="table table-hover">
-		  <tr><th>Required Nominal Capacity (kW)</th><th>Gross Installation Cost ($)</th><th>Breakeven Time (After 30% Federal Tax Credit, Forecasted Prices, Years)</th></tr>
-		  <tr><td>{{ result['nominal_capacity'] | round(1) }}</td><td>{{ result['install_cost_formatted']}}</td><td> {{ result['breakeven'] | round | int }}</td></tr>
+		  <tr><th>Required Installation Capacity</th><th>Gross Installation Costs in {{result['loc']['state_name']}}</th><th>Breakeven Time after 30% Federal Tax Credit</th></tr>
+		  <tr><td>{{ result['nominal_capacity'] | round(1) }} kW</td>
+		  	<td>
+		  			${{ result['install_cost_formatted']}}
+		  	</td>
+		  	<td>
+		  			{{ result['breakeven_formatted']}}
+		  	</td>
+		  </tr>
       </table>
 
       <table class="table table-hover">
@@ -174,9 +219,9 @@
 			  height: 400px;
 			}
 			#chart2 svg {
-			  height: 500px;
+			  height: 400px;
 			}
-			
+			.nvd3.multiChart .axis .nv-axis line { stroke: none; fill: none; }
 		</style>
 
 		<div class="row">
@@ -185,8 +230,31 @@
 				<div id="chart">
 					<svg></svg>
 				</div>	
-		
-				<script type="text/javascript">
+
+				<script>
+					var myData1 = JSON.parse('{{result["graph_json"] | safe}}');
+					myData1[0].type = "bar";
+					myData1[0].yAxis = 1;
+					myData1[1].type = "line";
+					myData1[1].yAxis = 2;
+					nv.addGraph(function() {
+						var chart = nv.models.multiChart()
+							.margin({top: 30, right: 60, bottom: 50, left: 70})
+							//.color(d3.scale.category10().range());
+						chart.xAxis.tickFormat( function(d) { return d3.time.format('%b') (new Date(d)); } );
+						chart.yAxis1.tickFormat(d3.format(',d'));
+						chart.yAxis2.tickFormat(d3.format('.1f'));
+						
+						chart.yDomain1([0,'{{result["graph1_y1_max"]}}']);
+						chart.yDomain2([0,'{{result["graph1_y2_max"]}}']);
+						
+						d3.select('#chart svg')
+							.datum(myData1)
+							.transition().duration(500).call(chart);
+						return chart;
+					});
+				</script>		
+				<!--<script type="text/javascript">
 					var data = JSON.parse('{{result["graph_json"] | safe	 }}');
 					/* console.log(data); */
 		
@@ -218,55 +286,99 @@
 
 							/*return chart;*/
 						});
-				</script>
+				</script>-->
 			</div>
+			
+			<!--<div class="col-md-6">
+				<div id="chart2">
+					<svg></svg>
+				</div>	
+		
+				<script type="text/javascript">
+					/*These lines are all chart setup.  Pick and choose which chart features you want to utilize. */
+					nv.addGraph(function() {
+					  var chart = nv.models.lineChart()
+									.margin({left: 100})  //Adjust chart margins to give the x-axis some breathing room.
+									.useInteractiveGuideline(true)  //We want nice looking tooltips and a guideline!
+									//.transitionDuration(350)  //how fast do you want the lines to transition?
+									.showLegend(true)       //Show the legend, allowing users to turn on/off line series.
+									.showYAxis(true)        //Show the y-axis
+									.showXAxis(true)        //Show the x-axis
+					  ;
+
+					/*  chart.xAxis     //Chart x-axis settings
+						  .axisLabel('Time (ms)')
+						  .tickFormat(d3.format(',r'));
+
+					  chart.yAxis     //Chart y-axis settings
+						  .axisLabel('Voltage (v)')
+						  .tickFormat(d3.format('.02f')); */
+
+					  /* Done setting the chart up? Time to render it!*/
+					  //var myData = sinAndCos();   //You need data...
+					  var myData = JSON.parse('{{result["graph2_json"] | safe}}');
+
+					  d3.select('#chart2 svg')    //Select the <svg> element you want to render the chart in.   
+						  .datum(myData)         //Populate the <svg> element with chart data...
+						  .call(chart);          //Finally, render the chart!
+
+					  //Update the chart when window resizes.
+					  nv.utils.windowResize(function() { chart.update() });
+					  return chart;
+					});
+				</script>
+			</div>-->	
 			
 			<div class="col-md-6">
 				<!-- graph will go here -->
 				<div id="chart2">
 					<svg></svg>
 				</div>	
-		
-				<!-- This is a placeholder for the installation cost vs future electricity prices graph -->
-				<!--<script type="text/javascript">
-					var data = JSON.parse('{{result["graph_json"] | safe }}');
-						nv.addGraph(function() {
-							var chart = nv.models.lineChart()
-							.useInteractiveGuideline(true)
-							;
 
-							chart.xAxis
-							.axisLabel('Date')
-							.tickFormat(d3.format(',r'))
-							;
-
-							chart.yAxis
-							.axisLabel('Unrecovered Costs')
-							.tickFormat(d3.format('.02f'))
-							;
-
-							chart.yAxis
-							.axisLabel('Electricity Prices')
-							.tickFormat(d3.format('.02f'))
-							;
-
-							chart.lines.forceY([0]);
-
-							d3.select('#chart2 svg')
-							.datum(data())
-							.transition().duration(500)
-							.call(chart)
-							;
-
-							nv.utils.windowResize(chart.update);
-
-							return chart;
-						});
-
-				</script>-->
-			</div>			
+				<script>
+					var myData = JSON.parse('{{result["graph2_json"] | safe}}');
+					myData[0].type = "area";
+					myData[0].yAxis = 1;
+					myData[1].type = "line";
+					myData[1].yAxis = 2;
+					/*
+					testdata[2].type = "line";
+					testdata[2].yAxis = 1;
+					testdata[3].type = "line";
+					testdata[3].yAxis = 2;
+					testdata[4].type = "scatter";
+					testdata[4].yAxis = 1;
+					testdata[5].type = "scatter";
+					testdata[5].yAxis = 2;
+					testdata[6].type = "bar";
+					testdata[6].yAxis = 2;
+					testdata[7].type = "bar";
+					testdata[7].yAxis = 2;
+					testdata[8].type = "bar";
+					testdata[8].yAxis = 2;
+					*/
+					nv.addGraph(function() {
+						var chart = nv.models.multiChart()
+							.margin({top: 30, right: 60, bottom: 50, left: 70})
+							//.color(d3.scale.category10().range());
+						chart.xAxis.tickFormat( function(d) { return d3.time.format('%Y') (new Date(d)); } );
+						chart.yAxis1.tickFormat(d3.format('$,d'));
+						chart.yAxis2.tickFormat(d3.format('.1f'));
+						
+						chart.yDomain1([0,'{{result["graph2_y1_max"]}}']);
+						chart.yDomain2([0,'{{result["graph2_y2_max"]}}']);
+						
+						d3.select('#chart2 svg')
+							.datum(myData)
+							.transition().duration(500).call(chart);
+						return chart;
+					});
+				</script>
+			</div>					
+				
 		</div>
     </div>
+</div>
 
     <!-- Bootstrap core JavaScript
     ================================================== -->
