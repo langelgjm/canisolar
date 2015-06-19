@@ -17,6 +17,7 @@ from geopy.geocoders import GoogleV3
 import json
 from r import R
 import datetime
+import math
 
 month_lengths = [calendar.monthrange(2015,i)[1] for i in range(1,13)]
 mysql_url = "localhost"
@@ -82,8 +83,8 @@ class SolarUser(object):
         Return a cost estimate (in dollars) for a system of specified capacity cap using a model.
         '''
         cost = myr.predict_cost(self.state, cap)
-        print("Estimated cost of this install:", cost)
-        return cost        
+        print("Estimated cost of this install:", cost['fit'])
+        return cost
     def est_savings(self, ann_demand_met=0.50):
         '''
         Return an estimate of savings (in $) over the course of a year, given a proportion of annual demand met.
@@ -108,6 +109,7 @@ class SolarUser(object):
         #cost_before = (self.prices['cpkWh'] / 100) * self.annual_consumption['kWh']
         kwh_prod_per_year = self.annual_consumption * ann_demand_met
         # Repeat the 12-month consumption series 30 times
+        # This is what needs to me modified to including declining performance over time
         future_production = pd.concat([kwh_prod_per_year]*30, ignore_index=True)        
         future_costs_after = future_costs_before - future_production.mul(prices_forecasted['price'] / 100, axis='index')
         #cost_after =  cost_before - ((self.prices['cpkWh'] / 100) * kwh_prod_per_year['kWh'])
@@ -133,7 +135,12 @@ class SolarUser(object):
         #cost_before = (self.prices['cpkWh'] / 100) * self.annual_consumption['kWh']
         kwh_prod_per_year = self.annual_consumption * ann_demand_met
         # Repeat the 12-month consumption series 30 times
-        future_production = pd.concat([kwh_prod_per_year]*30, ignore_index=True)        
+        # This is what needs to me modified to including declining performance over time
+        # This uses an exponential decay equation to create a numpy array of derating factors for 30 years (360 months).
+        # The targets were about 90% after 10 years, and about 80% after 25 years, capped at 80%. 13 is a constant in the equation below.
+        derating_array = np.array([0.8 + 0.2*math.e**(-((i/12)/13)) if i > 1 else 1.0 for i in range(1,361)])
+        #future_production = pd.concat([kwh_prod_per_year]*30, ignore_index=True)
+        future_production = pd.concat([kwh_prod_per_year]*30, ignore_index=True).mul(pd.Series(derating_array), axis='index')
         future_costs_after = future_costs_before['kWh'] - future_production['kWh'].mul(prices_forecasted['price'] / 100, axis='index')
         #cost_after =  cost_before - ((self.prices['cpkWh'] / 100) * kwh_prod_per_year['kWh'])
         # The column name here is wrong, tofix
@@ -146,13 +153,13 @@ class SolarUser(object):
         '''
         cost = self.get_cost_modeled(cap)
         savings = self.est_savings(ann_demand_met)
-        print("Breakeven (constant prices, years):", cost/savings)
-        return cost / savings
-    def est_break_even_forecasted(self, cap, ann_demand_met=0.50):
+        print("Breakeven (constant prices, years):", cost['fit']/savings)
+        return cost['fit'] / savings
+    def est_break_even_forecasted(self, cap, cost, ann_demand_met=0.50):
         '''
-        Return break even time, in years. Uses forecasted prices.
+        Return break even time, in years, for an install of a given capacity and cost. Uses forecasted prices.
         '''
-        cost = self.get_cost_modeled(cap)
+        #cost = self.get_cost_modeled(cap)
         # Temporary, to account for 30% federal tax credit
         net_cost = cost * 0.70
         print("Cost after Federal Tax Credit:", net_cost)
@@ -227,7 +234,9 @@ def from_web(address, cost, month, slider_val=0.50, efficiency_slider_val=0.15):
     my_area = user.get_req_area(ann_demand_met=slider_val, efficiency=efficiency_slider_val)
     install_cost = user.get_cost_modeled(my_cap)
     breakeven_constant = user.est_break_even(my_cap, ann_demand_met=slider_val)
-    breakeven = user.est_break_even_forecasted(my_cap, ann_demand_met=slider_val)
+    breakeven = user.est_break_even_forecasted(my_cap, install_cost['fit'], ann_demand_met=slider_val)
+    breakeven_lwr = user.est_break_even_forecasted(my_cap, install_cost['lwr'], ann_demand_met=slider_val)
+    breakeven_upr = user.est_break_even_forecasted(my_cap, install_cost['upr'], ann_demand_met=slider_val)
     
     def dict_to_dict_pairs(mydict):
         pairs = []
@@ -256,7 +265,7 @@ def from_web(address, cost, month, slider_val=0.50, efficiency_slider_val=0.15):
         return pairs
 
     # New stuff for second graph)
-    cost_vs_price_dict = user.remaining_cost_vs_future_prices(install_cost, ann_demand_met=slider_val)
+    cost_vs_price_dict = user.remaining_cost_vs_future_prices(install_cost['fit'], ann_demand_met=slider_val)
     graph2_y2_max = round(max(cost_vs_price_dict['future_prices'])) + 1
     graph2_y1_max = round(max(cost_vs_price_dict['remaining_cost']))
     
@@ -289,16 +298,23 @@ def from_web(address, cost, month, slider_val=0.50, efficiency_slider_val=0.15):
     #graph_json = json.dumps(graph_data, default=lambda df: json.loads(df.to_json()))
     graph_json = json.dumps(graph_data)
     
-    if breakeven == -1:
-        breakeven_formatted = "More than 30 years"
-    else:
-        breakeven_formatted = str(int(round(breakeven))) + ' years'
+    # This correctly formats string for output, catching the sentinel value and changing it as necessary
+    breakeven_dict = {'fit': breakeven, 'lwr': breakeven_lwr, 'upr': breakeven_upr}
+    for k in breakeven_dict.keys():
+        if breakeven_dict[k] == -1:
+            breakeven_dict[k] = "More than 30 years"
+        else:
+            breakeven_dict[k] = str(int(round(breakeven_dict[k]))) + ' years'
     
     result = {'nominal_capacity': my_cap, 
               'install_cost': install_cost, 
-              'install_cost_formatted': "{:,}".format(round(install_cost)),
+              'install_cost_formatted': "{:,}".format(round(install_cost['fit'])),
+              'install_cost_lwr_fmt': "{:,}".format(round(install_cost['lwr'])),
+              'install_cost_upr_fmt': "{:,}".format(round(install_cost['upr'])),
               'breakeven': breakeven,
-              'breakeven_formatted': breakeven_formatted,
+              'breakeven_formatted': breakeven_dict['fit'],
+              'breakeven_lwr_fmt': breakeven_dict['lwr'],
+              'breakeven_upr_fmt': breakeven_dict['upr'],
               'breakeven_constant': breakeven_constant,
               'area_required': my_area,
               'loc': loc,

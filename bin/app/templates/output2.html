@@ -110,7 +110,7 @@
   			</div>
   			<div class="col-md-6">
 				<div class="form-group">
-					<label class="control-label" for="ann_demand_met">Percentage of Consumption Supplied by Solar Power: <span id="slider1_span">{{ data['ann_demand_met_slider_val'] * 100 | round | int }}%</span></label>
+					<label class="control-label" for="ann_demand_met">Percentage of Consumption Supplied by Solar Power: <span id="slider1_span">{{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}%</span></label>
 					<div class="controls">
 						<table>
 						<tr>
@@ -125,7 +125,7 @@
 				</div>
 
 				<div class="form-group">
-					<label class="control-label" for="ann_demand_met">Panel Efficiency: <span id="slider2_span">{{ data['efficiency_slider_val'] * 100 | round | int }}%</span></label>
+					<label class="control-label" for="ann_demand_met">Panel Efficiency: <span id="slider2_span">{{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}%</span></label>
 					<div class="controls">
 						<table>
 						<tr>
@@ -187,29 +187,36 @@
     </div>
 
 	<div class="container">
-      <table class="table table-hover">
-		  <tr><th>Required Installation Capacity</th><th>Estimated Installation Costs in {{ data['loc']['state_name'] }}</th><th>Breakeven Time after 30% Federal Tax Credit</th></tr>
-		  <tr><td>{{ data['req_cap'] | round(1) }} kW</td>
-		  	<td>
-		  			${{ '{:,.0f}'.format(data['install_cost']['fit']) }} (low end: ${{ '{:,.0f}'.format(data['install_cost']['lwr']) }}; high end: ${{ '{:,.0f}'.format(data['install_cost']['upr']) }})
-		  	</td>
-		  	<td>
-		  			{{ '{:.0f}'.format(data['breakeven']['fit']) if data['breakeven']['fit'] != -1 else "more than 30" }} years (as short as {{ '{:.0f}'.format(data['breakeven']['lwr']) if data['breakeven']['lwr'] != -1 else "more than 30" }} years, but as long as {{ '{:.0f}'.format(data['breakeven']['upr']) if data['breakeven']['upr'] != -1 else "more than 30" }} years)
-		  	</td>
-		  </tr>
-      </table>
+	<p><b><span id="canisolar"></span></b></p>
+	
+	<script>
+		var el = document.getElementById("canisolar");
+		if ("{{data['breakeven']['fit']}}" < 20) {
+			el.innerHTML = "You can solar!";
+		} else {
+			el.innerHTML = "It could take a long time for you to break even on a solar installation.";		
+		}
+	</script>
+	
+	<p>
+	To meet {{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}% of your annual consumption, you would need a <b>{{ data['req_cap'] | round(1) }} kW solar installation</b>. 
+	In {{ data['loc']['state_name'] }}, an installation of this size would most likely cost <b>${{ '{:,.0f}'.format(data['install_cost']['fit']) }}</b>, 
+	although could prices vary from a low of ${{ '{:,.0f}'.format(data['install_cost']['lwr']) }} to a high of ${{ '{:,.0f}'.format(data['install_cost']['upr']) }}.
+	</p>
 
-      <table class="table table-hover">
-		  <tr>
-		  <th>Area Required (square feet)</th></tr>
-		  <tr><td>{{ data['req_area_sqft'] | round | int }}</td>
-		  </tr>
-      </table>
+	<p>
+	Given these installation costs and {{ data['loc']['state_name'] }}'s future electricity prices, you could expect to break even in <b>{{ '{:.0f}'.format(data['breakeven']['fit']) if data['breakeven']['fit'] != -1 else "more than 30" }} years</b>.
+	If your installation costs were lower, you could break even in as few as {{ '{:.0f}'.format(data['breakeven']['lwr']) if data['breakeven']['lwr'] != -1 else "more than 30" }} years; 
+	if your installation costs were higher, as many as {{ '{:.0f}'.format(data['breakeven']['upr']) if data['breakeven']['upr'] != -1 else "more than 30" }} years.
+	</p>
 
-     </div>
+	<p>
+	Solar panels with {{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}% efficiency would require about <b>{{ data['req_area_sqft'] | round | int }} square feet of space</b>.
+	</p>
+	</div>
 
 	<div class="container">
-		<p>Click <a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}">here</a> for a list of local renewable energy incentives available in your area.</p>
+		<p>Click <a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}">here</a> for a list of local renewable energy incentives available in your area that could further reduce your installation costs.</p>
     </div>
 
 	<div class="container">

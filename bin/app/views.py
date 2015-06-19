@@ -1,9 +1,8 @@
-from flask import render_template, request, Markup
+from flask import render_template, request
 from app import app
 import os
 os.chdir('/Users/gjm/insight/canisolar/bin/')
-import mvp
-from nvd3 import lineChart
+from canisolar import SolarUser, geocode, make_graphs
 
 @app.route('/')
 
@@ -17,54 +16,47 @@ def canisolar_input():
 
 @app.route('/output')
 def canisolar_output():
-    #pull 'ID' from input field and store it
     address = request.args.get('address')
+    print(address)
     cost = request.args.get('cost')
-    # cast from str to float
     cost = float(cost)
     month = request.args.get('month')
-    # cast from str to int
     month = int(month)
     
-    # slider
     if request.args.get('ann_demand_met'):
-        slider_val = float(request.args.get('ann_demand_met'))
-        print("HTML5 Slider Value:", slider_val)
+        ann_demand_met_slider_val = float(request.args.get('ann_demand_met'))
     else:
-        slider_val = 0.50
+        ann_demand_met_slider_val = 0.50
 
     if request.args.get('efficiency'):
         efficiency_slider_val = float(request.args.get('efficiency'))
-        print("HTML5 Efficiency Slider Value:", efficiency_slider_val)
     else:
         efficiency_slider_val = 0.15
+    
+    loc = geocode(address)
+    user = SolarUser(loc['lon'], loc['lat'], loc['state'], cost, month, 
+                     ann_demand_met=ann_demand_met_slider_val, 
+                     efficiency=efficiency_slider_val)
+    user.populate()
+    # Now we can access the following attributes
+    #user.req_cap
+    #user.req_area_m2
+    #user.req_area_sqft
+    # The following two items are dicts
+    #user.install_cost
+    # We need to check to see if any of these dict items are -1
+    #user.breakeven
 
-    
-    result = mvp.from_web(address, cost, month, slider_val, efficiency_slider_val)
-    
-    #chart = lineChart(name="lineChart", x_is_date=False)
-    
-    #xdata = range(1,13)
-    # Convert to 10s of kWh for ease of plotting right now on a single axis
-    #consumption = [i / 10 for i in result['annual_consumption']['kWh'].tolist()]
-    #insolation = result['annual_insolation']['kWhpm2'].tolist()
-    
-    #extra_serie = {"tooltip": {"y_start": "There are ", "y_end": " calls"}}
-    #chart.add_serie(y=consumption, x=xdata, name='Consumption (10s of kWh)')
-    #extra_serie = {"tooltip": {"y_start": "", "y_end": " min"}}
-    #chart.add_serie(y=insolation, x=xdata, name='Insolation (mean kWh / m^2 / day)')
-    #chart.set_graph_width(1000)
-    #chart.buildhtml()
+    data = {'address': address,
+            'cost': cost, 
+            'month': month, 
+            'ann_demand_met_slider_val': ann_demand_met_slider_val,
+            'efficiency_slider_val': efficiency_slider_val,
+            'loc': loc, 'req_cap': user.req_cap, 
+            'install_cost': user.install_cost, 
+            'breakeven': user.breakeven,
+            'req_area_sqft': user.req_area_sqft}    
 
-    #output_file = open('/Users/gjm/insight/canisolar/bin/app/templates/test-nvd3.html', 'w')
-    #output_file.write(chart.htmlcontent)
-    print(address)
-    
-    print(result['graph_json'])
+    graph_data = make_graphs(user, loc)
 
-    return render_template("output.html", address = address,
-                           cost = cost,
-                           month = month,
-                           slider_val = slider_val, 
-                           efficiency_slider_val = efficiency_slider_val, 
-                           result = result)
+    return render_template("output2.html", data=data, graph_data=graph_data)
