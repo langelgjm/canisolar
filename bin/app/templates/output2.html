@@ -22,138 +22,7 @@
 
 		<script type="text/javascript" src="../static/js/d3.v3.js"></script>
 		<script type="text/javascript" src="../static/js/nv.d3.js"></script>
-	</head>
-
-	<body>
-
-	<nav class="navbar navbar-inverse navbar-fixed-top">
-		<div class="container">
-			<div class="navbar-header">
-				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-					<span class="sr-only">Toggle navigation</span>
-					<span class="icon-bar"></span>
-					<span class="icon-bar"></span>
-					<span class="icon-bar"></span>
-				</button>
-				<a class="navbar-brand" href="#">Can I Solar?</a>
-			</div>
-			<div id="navbar" class="collapse navbar-collapse">
-				<ul class="nav navbar-nav">
-					<li class="active"><a href="#">Home</a></li>
-					<li><a href="#about">About</a></li>
-					<li><a href="#contact">Contact</a></li>
-				</ul>
-			</div><!--/.nav-collapse -->
-		</div>
-    </nav>
-
-	<br><br> 
-	
-	<!-- To create some extra space at the top -->
-	<div class="container">
-		<div class="row">
-			<br><br>
-		</div>
-	</div>
-	
-    <div class="container">
-    	<div class="row">
-		<form id="myform"  name="myform" class="form-horizontal"  action="/output" method="GET">
-		<fieldset>
-  			<div class="col-md-6">
-				<!-- Text input-->
-				<div class="form-group">
-				  <label class="control-label" for="address">Address</label>
-				  <div class="controls">
-					<input id="address" name="address" class="input-xlarge" required="" type="text" value="{{ data['address'] }}">
-
-				  </div>
-				</div>
-
-				<!-- Text input-->
-				<div class="form-group">
-				  <label class="control-label" for="cost">Most Recent Bill</label>
-				  <div class="controls">
-					<input id="cost" name="cost" class="input-xlarge" required="" type="text" value="{{ '{:.0f}'.format(data['cost']) }}">
-
-				  </div>
-				</div>
-
-				<!-- Select Basic -->
-				<div class="form-group">
-				  <label class="control-label" for="month">Month of Bill</label>
-				  <div class="controls">
-					<select id="month" name="month" class="input-xlarge" value ="{{ data['month'] }}">
-					  <option value="1">January</option>
-					  <option value="2">February</option>
-					  <option value="3">March</option>
-					  <option value="4">April</option>
-					  <option value="5">May</option>
-					  <option value="6">June</option>
-					  <option value="7">July</option>
-					  <option value="8">August</option>
-					  <option value="9">September</option>
-					  <option value="10">October</option>
-					  <option value="11">November</option>
-					  <option value="12">December</option>
-					</select>
-				  </div>
-				</div>
-
-				<!-- Button -->
-				<div class="form-group">
-					<label class="control-label" for="submit"></label>
-					<div class="controls">
-						<button id="submitbutton" name="submitbutton" class="btn btn-primary">Submit</button>
-					</div>
-				</div>				  			
-  			</div>
-  			<div class="col-md-6">
-				<div class="form-group">
-					<label class="control-label" for="ann_demand_met">Percentage of Consumption Supplied by Solar Power: <span id="slider1_span">{{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}%</span></label>
-					<div class="controls">
-						<table>
-						<tr>
-						<td>0%</td>
-						<td>
-						<input id="ann_demand_met" type="range" name="ann_demand_met" style="width: 400px; height: 20px;" oninput="slider1_input(this.value)" onmouseup="slider_mouseUp()" min="0.0" max="1.00" step="0.01" value="{{ data['ann_demand_met_slider_val'] }}">
-						</td>
-						<td>100%</td>
-						</tr>
-						</table>
-					</div>
-				</div>
-
-				<div class="form-group">
-					<label class="control-label" for="ann_demand_met">Panel Efficiency: <span id="slider2_span">{{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}%</span></label>
-					<div class="controls">
-						<table>
-						<tr>
-						<td>15%</td>
-						<td>
-						<input id="efficiency" type="range" name="efficiency" style="width: 400px; height: 20px;" oninput="slider2_input(this.value)" onmouseup="slider_mouseUp()" min="0.15" max="0.20" step="0.01" value="{{ data['efficiency_slider_val'] }}">
-						</td>
-						<td>20%</td>
-						</tr>
-						</table>				
-					</div>
-				</div>  			
-  			</div>
-			</fieldset>
-			</form>
-		</div>
-
-
-		<!-- Script to ensure correct month remains selected after a submission -->
-		<script>
-			// Get the select element
-			var el = document.getElementById("month");
-			// Select the option indicated by month (JS indices begin at 0)
-			var opt = el.options["{{ data['month'] - 1 }}"];
-			// Set the option to selected
-			opt.selected = true;
-		</script>		
-
+		
 		<!-- Script to update slider value-->
 		<script>
 			function slider1_input(val) {
@@ -183,44 +52,157 @@
 				document.myform.submit();
 			}
 		</script>
+	</head>
 
-    </div>
+	<body>
+
+	<nav class="navbar navbar-inverse navbar-fixed-top">
+		<div class="container">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="#">Can I Solar?</a>
+			</div>
+			<div id="navbar" class="collapse navbar-collapse">
+				<ul class="nav navbar-nav">
+					<li class="active"><a href="/">Home</a></li>
+					<li><a href="#about">About</a></li>
+					<li><a href="#contact">Contact</a></li>
+				</ul>
+			</div><!--/.nav-collapse -->
+		</div>
+    </nav>
 
 	<div class="container">
-	<p><b><span id="canisolar"></span></b></p>
 	
-	<script>
-		var el = document.getElementById("canisolar");
-		if ("{{data['breakeven']['fit']}}" < 20) {
-			el.innerHTML = "You can solar!";
-		} else {
-			el.innerHTML = "It could take a long time for you to break even on a solar installation.";		
-		}
-	</script>
+		<div class="row">
+			<br><br>
+			<br><br>
+		</div>
 	
-	<p>
-	To meet {{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}% of your annual consumption, you would need a <b>{{ data['req_cap'] | round(1) }} kW solar installation</b>. 
-	In {{ data['loc']['state_name'] }}, an installation of this size would most likely cost <b>${{ '{:,.0f}'.format(data['install_cost']['fit']) }}</b>, 
-	although could prices vary from a low of ${{ '{:,.0f}'.format(data['install_cost']['lwr']) }} to a high of ${{ '{:,.0f}'.format(data['install_cost']['upr']) }}.
-	</p>
+	    <div class="row">
+		<form id="myform"  role="form" name="myform" class="form-horizontal"  action="/output" method="GET">
+  			<div class="col-md-4">
+				<!-- Text input-->
+				<div class="form-group">
+				  <label class="control-label" for="address">Address</label>
+				  <div class="controls">
+					<input id="address" name="address" class="form-control" required="" type="text" value="{{ data['address'] }}">
+				  </div>
+				</div>
 
-	<p>
-	Given these installation costs and {{ data['loc']['state_name'] }}'s future electricity prices, you could expect to break even in <b>{{ '{:.0f}'.format(data['breakeven']['fit']) if data['breakeven']['fit'] != -1 else "more than 30" }} years</b>.
-	If your installation costs were lower, you could break even in as few as {{ '{:.0f}'.format(data['breakeven']['lwr']) if data['breakeven']['lwr'] != -1 else "more than 30" }} years; 
-	if your installation costs were higher, as many as {{ '{:.0f}'.format(data['breakeven']['upr']) if data['breakeven']['upr'] != -1 else "more than 30" }} years.
-	</p>
+				<!-- Text input-->
+				<div class="form-group">
+				  <label class="control-label" for="cost">Most Recent Bill</label>
+				  <div class="controls">
+					<input id="cost" name="cost" class="form-control" required="" type="text" value="{{ '{:.0f}'.format(data['cost']) }}">
 
-	<p>
-	Solar panels with {{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}% efficiency would require about <b>{{ data['req_area_sqft'] | round | int }} square feet of space</b>.
-	</p>
-	</div>
+				  </div>
+				</div>
 
-	<div class="container">
-		<p>Click <a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}">here</a> for a list of local renewable energy incentives available in your area that could further reduce your installation costs.</p>
-    </div>
+				<!-- Select Basic -->
+				<div class="form-group">
+				  <label class="control-label" for="month">Month of Bill</label>
+				  <div class="controls">
+					<select id="month" name="month" class="form-control" value ="{{ data['month'] }}">
+					  <option value="1">January</option>
+					  <option value="2">February</option>
+					  <option value="3">March</option>
+					  <option value="4">April</option>
+					  <option value="5">May</option>
+					  <option value="6">June</option>
+					  <option value="7">July</option>
+					  <option value="8">August</option>
+					  <option value="9">September</option>
+					  <option value="10">October</option>
+					  <option value="11">November</option>
+					  <option value="12">December</option>
+					</select>
+				  </div>
+				</div>
 
-	<div class="container">
-		<!-- custom CSS for graph -->
+				<!-- Button -->
+				<div class="form-group">
+					<label class="control-label" for="submit"></label>
+					<div class="controls">
+						<button id="submitbutton" name="submitbutton" class="btn btn-primary">Can I Solar?</button>
+					</div>
+				</div>				  			
+  			</div>
+  			<div class="col-md-4"></div>
+  			<div class="col-md-4">
+				<div class="form-group">
+					<label class="control-label" for="ann_demand_met">Consumption Supplied by Solar: <span id="slider1_span">{{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}%</span></label>
+					<div class="controls">
+						<table>
+						<tr>
+						<td>0%</td>
+						<td>
+						<input id="ann_demand_met" class="form-control" type="range" name="ann_demand_met" style="width: 400px; height: 20px;" oninput="slider1_input(this.value)" onmouseup="slider_mouseUp()" min="0.0" max="1.00" step="0.01" value="{{ data['ann_demand_met_slider_val'] }}">
+						</td>
+						<td>100%</td>
+						</tr>
+						</table>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label class="control-label" for="ann_demand_met">Panel Efficiency: <span id="slider2_span">{{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}%</span></label>
+					<div class="controls">
+						<table>
+						<tr>
+						<td>15%</td>
+						<td>
+						<input id="efficiency" class="form-control" type="range" name="efficiency" style="width: 400px; height: 20px;" oninput="slider2_input(this.value)" onmouseup="slider_mouseUp()" min="0.15" max="0.20" step="0.01" value="{{ data['efficiency_slider_val'] }}">
+						</td>
+						<td>20%</td>
+						</tr>
+						</table>				
+					</div>
+				</div>  			
+  			</div>
+		</form>
+		</div>
+
+		<div class="row">
+	
+			<h4><b><span id="canisolar"></span></b></h4>
+	
+			<script>
+				var el = document.getElementById("canisolar");
+				if ("{{data['breakeven']['fit']}}" < 20) {
+					el.innerHTML = "You can solar!";
+				} else {
+					el.innerHTML = "It could take a long time for you to break even on a solar installation.";		
+				}
+			</script>
+	
+			<p>
+			To meet {{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}% of your annual consumption, you would need a <b>{{ data['req_cap'] | round(1) }} kW solar installation</b>. 
+			In {{ data['loc']['state_name'] }}, an installation of this size would most likely cost <b>${{ '{:,.0f}'.format(data['install_cost']['fit']) }}</b>, 
+			although could prices vary from a low of ${{ '{:,.0f}'.format(data['install_cost']['lwr']) }} to a high of ${{ '{:,.0f}'.format(data['install_cost']['upr']) }}.
+			</p>
+
+			<p>
+			Given these installation costs, {{ data['loc']['state_name'] }}'s future electricity prices, and the current 30% federal tax credit, you could expect to break even in <b>{{ '{:.0f}'.format(data['breakeven']['fit']) if data['breakeven']['fit'] != -1 else "more than 30" }} years</b>.
+			If your installation costs were lower, you could break even in as few as {{ '{:.0f}'.format(data['breakeven']['lwr']) if data['breakeven']['lwr'] != -1 else "more than 30" }} years; 
+			if your installation costs were higher, as many as {{ '{:.0f}'.format(data['breakeven']['upr']) if data['breakeven']['upr'] != -1 else "more than 30" }} years.
+			</p>
+
+			<p>
+			Solar panels with {{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}% efficiency would require about <b>{{ data['req_area_sqft'] | round | int }} square feet of space</b>.
+			</p>
+	
+			<p>
+			<a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}">Click here</a> for a list of local renewable energy incentives available in your area that could further reduce your installation costs.
+			</p>
+		</div>
+
+		<!-- custom CSS for graphs -->
 		<style>
 			#chart svg {
 			  height: 400px;
@@ -264,7 +246,6 @@
 					});
 				</script>		
 			</div>
-			
 			<div class="col-md-6">
 				<!-- graph will go here -->
 				<div id="chart2">
@@ -312,8 +293,17 @@
 				
 		</div>
     </div>
-</div>
 
+	<!-- Script to ensure correct month remains selected after a submission. Make sure this comes AFTER the actual element exists in the DOM.-->
+	<script>
+		// Get the select element
+		var el = document.getElementById("month");
+		// Select the option indicated by month (JS indices begin at 0)
+		var opt = el.options["{{ data['month'] - 1 }}"];
+		// Set the option to selected
+		opt.selected = true;
+	</script>		
+    
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->

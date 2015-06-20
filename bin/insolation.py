@@ -13,6 +13,12 @@ import pymongo
 import pandas as pd
 import calendar
 
+class PolyFindError(IndexError):
+    '''
+    Designed to be raised when poly_find method fails.
+    '''
+    pass
+
 class Insolation(object):
     '''
     Return an instance of the Insolation class, which provides an interface for storing and accessing insolation (solar hours) data.
@@ -65,7 +71,7 @@ class Insolation(object):
         if len(polys) < 1:
             # If no polygons were found, we were probably passed a coordinate for which we don't have any data
             print("ERROR: in Insolation.poly_find(): no matching polygons found; raising ValueError.")
-            raise ValueError
+            raise PolyFindError
         if len(polys) > 1:
             print("WARNING: in Insolation.poly_find(): multiple matching polygons found; using the first.")
         return polys

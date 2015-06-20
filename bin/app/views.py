@@ -8,11 +8,11 @@ from canisolar import SolarUser, geocode, make_graphs
 
 @app.route('/index')
 def index():
-    return render_template("input.html")
+    return render_template("input2.html")
 
 @app.route('/input')
 def canisolar_input():
-    return render_template("input.html")
+    return render_template("input2.html")
 
 @app.route('/output')
 def canisolar_output():

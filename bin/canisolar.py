@@ -35,6 +35,12 @@ class PredictionBoundError(IndexError):
     '''
     pass
 
+class GeocodeError(ValueError):
+    '''
+    Designed to be raised when geocoding fails.
+    '''
+    pass
+
 def dict_to_dict_pairs(mydict):
     '''
     Helper function that's useful for NVD3: takes a dict with 12 month number indices (1-12), 
@@ -86,25 +92,28 @@ def geocode(address):
     '''
     geolocator = GoogleV3()
     location = geolocator.geocode(address)
-    lon = location.longitude
-    lat = location.latitude
-    print('Longitude:', lon)
-    print('Latitude:', lat)
-    
-    # Here we get human-readable location elements for display on the web page. They have default values in case they 
-    # don't exist in location.raw. 
-    state = 'NA'
-    state_name = 'NA'
-    zipcode = '0000'
-    locality = 'NA'
-    for i in location.raw['address_components']:
-        if 'administrative_area_level_1' in i['types']:
-            state = i['short_name']
-            state_name = i['long_name']
-        if 'postal_code' in i['types']:
-            zipcode = i['short_name']
-        if 'locality' in i['types']:
-            locality = i['short_name']
+    try:
+        lon = location.longitude
+        lat = location.latitude
+        print('Longitude:', lon)
+        print('Latitude:', lat)
+        
+        # Here we get human-readable location elements for display on the web page. They have default values in case they 
+        # don't exist in location.raw. 
+        state = 'NA'
+        state_name = 'NA'
+        zipcode = '0000'
+        locality = 'NA'
+        for i in location.raw['address_components']:
+            if 'administrative_area_level_1' in i['types']:
+                state = i['short_name']
+                state_name = i['long_name']
+            if 'postal_code' in i['types']:
+                zipcode = i['short_name']
+            if 'locality' in i['types']:
+                locality = i['short_name']
+    except:
+        raise GeocodeError
     loc = {'lon': lon, 'lat': lat, 'locality': locality, 'state': state, 'state_name': state_name, 'zipcode': zipcode}
     print(loc)
     return loc
