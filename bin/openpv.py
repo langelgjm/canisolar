@@ -8,8 +8,6 @@ This file contains the OpenPV class definiton.
 The OpenPV are available from https://openpv.nrel.gov/
 """
 
-#import os
-#os.chdir("/Users/gjm/insight/canisolar/bin/")
 import requests
 import us
 import pymysql.cursors

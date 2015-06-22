@@ -1,7 +1,5 @@
 from flask import render_template, request
 from app import app
-import os
-os.chdir('/Users/gjm/insight/canisolar/bin/')
 from canisolar import SolarUser, make_graphs
 
 with open('google_maps_api_key.txt', 'r') as f:

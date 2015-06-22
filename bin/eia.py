@@ -5,8 +5,6 @@ Created on Tue Jun  2 16:24:14 2015
 @author: gjm
 """
 
-import os
-os.chdir("/Users/gjm/insight/canisolar/bin/")
 import requests
 import pandas as pd
 import pymysql

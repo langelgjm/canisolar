@@ -5,8 +5,6 @@ Created on Mon Jun  8 09:25:39 2015
 @author: gjm
 """
 
-import os
-os.chdir("/Users/gjm/insight/canisolar/bin")
 from insolation import Insolation
 from eia import EIA_DB
 import calendar
@@ -31,7 +29,7 @@ month_lengths = [calendar.monthrange(2015,i)[1] for i in range(1,13)]
 # These targets are currently industry standards, but can be expected to improve over time.
 pv_perf_loss_array = np.array([math.e**(-0.0053223 + -0.0089347*(i/12)) if i > 1 else 1.0 for i in range(1,361)])
 # We load this once at the beginning, because the models are large and take a while to load
-myr = R("/Users/gjm/insight/canisolar/bin/models")
+myr = R("../models/")
 ###############################################################################
 
 class PredictionBoundError(IndexError):
