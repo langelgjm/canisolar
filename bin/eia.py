@@ -57,29 +57,8 @@ class EIA_DB(object):
             sales FLOAT
             )
             ENGINE=MyISAM'''
-        prices_predicted = '''CREATE TABLE IF NOT EXISTS retail_residential_prices_predicted (
-            id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
-            state CHAR(2),
-            date DATE,
-            price FLOAT
-            )
-            ENGINE=MyISAM'''
-        prices_auto_arima = '''CREATE TABLE IF NOT EXISTS retail_residential_prices_auto_arima (
-            id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
-            state CHAR(2),
-            date DATE,
-            price FLOAT
-            )
-            ENGINE=MyISAM'''
-        prices_lin_reg = '''CREATE TABLE IF NOT EXISTS retail_residential_prices_lin_reg (
-            id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
-            state CHAR(2),
-            date DATE,
-            price FLOAT
-            )
-            ENGINE=MyISAM'''
         with self.connection.cursor() as cursor:
-            for sql in (prices, consump, prices_predicted, prices_auto_arima, prices_lin_reg):
+            for sql in (prices, consump):
                 cursor.execute(sql)
         self.connection.commit()        
     def insert_price(self, state, date, price):
@@ -135,27 +114,6 @@ class EIA_DB(object):
         periods = pd.to_datetime(pd.Series(timestamps)).dt.to_period(freq='M')
         values = [i for i in zip(*results)][3]
         prices = pd.DataFrame(list(values), index=periods, columns=['cpkWh'])
-        return prices
-    def get_predicted_prices(self, state):
-        sql = '''SELECT * FROM retail_residential_prices_predicted WHERE state = %s'''
-        with self.connection.cursor() as cursor:
-            cursor.execute(sql, (state))
-        results = cursor.fetchall()
-        prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
-        return prices
-    def get_prices_lin_reg(self, state):
-        sql = '''SELECT * FROM retail_residential_prices_lin_reg WHERE state = %s'''
-        with self.connection.cursor() as cursor:
-            cursor.execute(sql, (state))
-        results = cursor.fetchall()
-        prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
-        return prices
-    def get_prices_auto_arima(self, state):
-        sql = '''SELECT * FROM retail_residential_prices_auto_arima WHERE state = %s'''
-        with self.connection.cursor() as cursor:
-            cursor.execute(sql, (state))
-        results = cursor.fetchall()
-        prices = pd.DataFrame(list(results), columns=['id', 'state', 'date', 'price'])
         return prices
     def get_consump(self, state, periods):
         '''
