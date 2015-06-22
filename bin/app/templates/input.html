@@ -15,13 +15,54 @@
 
 		<!-- Bootstrap core CSS -->
 		<link href="../static/css/bootstrap.min.css" rel="stylesheet">
-		<link href="../static/css/nv.d3.css" rel="stylesheet">
 		<!-- Custom styles for this template -->
-		<!-- TODO: this is not found, why not? -->
-		<link href="../templates/starter-template.css" rel="stylesheet">
-
-		<script type="text/javascript" src="../static/js/d3.v3.js"></script>
-		<script type="text/javascript" src="../static/js/nv.d3.js"></script>
+		<link href="../static/css/starter-template.css" rel="stylesheet">
+		
+		<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key={{data['google_maps_api_key']}}"></script>
+		<script>
+		function geocode() {
+			geocoder = new google.maps.Geocoder();
+			geocoder.geocode({ 'address': document.getElementById("address").value}, 
+				function(results, status) {
+				  if (status == google.maps.GeocoderStatus.OK) {
+				  	var state = '';
+				  	var state_name = '';
+				  	var zipcode = '';
+				  	var locality = '';
+				  	var arrayLength = results[0].address_components.length;
+				  	for (var i = 0; i < arrayLength; i++) {
+						if (results[0].address_components[i].types.indexOf('administrative_area_level_1') > -1) {
+							state = results[0].address_components[i].short_name;
+							state_name = results[0].address_components[i].long_name;
+						}
+						if (results[0].address_components[i].types.indexOf('postal_code') > -1)  {
+							zipcode = results[0].address_components[i].short_name;
+						}						
+						if (results[0].address_components[i].types.indexOf('locality') > -1)  {
+							locality = results[0].address_components[i].short_name;
+						}
+						if (locality === '') {
+							if (results[0].address_components[i].types.indexOf('administrative_area_level_2') > -1)  {
+								locality = results[0].address_components[i].short_name;
+							}
+						}						
+				  	}
+					document.getElementById("lat").value = results[0].geometry.location.lat();
+					document.getElementById("lng").value = results[0].geometry.location.lng();
+					document.getElementById("state").value = state;
+					document.getElementById("state_name").value = state_name;
+					document.getElementById("locality").value = locality;
+					document.getElementById("zipcode").value = zipcode;
+					document.myform.action = "/output";
+					document.myform.submit();	
+				  } else {
+				  // Write some error handling code here
+				  	console.log('GeocoderStatus Not OK');
+				  }
+				}
+			);
+		}
+  		</script>		
 	</head>
 
 	<body>
@@ -47,68 +88,82 @@
 		</div>
     </nav>
 
-	<br><br> 
-	
-	<!-- To create some extra space at the top -->
 	<div class="container">
+	
 		<div class="row">
 			<br><br>
+			<br><br>
 		</div>
-	</div>
+
+		<div class="row">	
+			<h4>
+			Enter your address, a recent electric bill, and the month of the bill, and <b>Can I Solar</b> will tell you if a solar installation could work for you.
+			</h4>
+		</div>
+
 	
-    <div class="container">
-		<form id="myform"  name="myform" class="form-horizontal"  action="/output" method="GET">
-		<fieldset>
+	    <div class="row">
+		<form id="myform"  role="form" name="myform" class="form-horizontal" onsubmit="event.preventDefault(); geocode()" action="/output" method="GET">
+  			<div class="col-md-4">
+				<!-- Text input-->
+				<div class="form-group">
+				  <label class="control-label" for="address">Address</label>
+				  <div class="controls">
+					<input id="address" name="address" class="form-control" required="" type="text" value="">
+				  </div>
+				</div>
 
-		<!-- Text input-->
-		<div class="form-group">
-		  <label class="control-label" for="address">Address</label>
-		  <div class="controls">
-			<input id="address" name="address" class="input-xlarge" required="" type="text">
+				<!-- Text input-->
+				<div class="form-group">
+				  <label class="control-label" for="cost">Most Recent Bill</label>
+				  <div class="controls">
+					<input id="cost" name="cost" class="form-control" required="" type="text" value="">
 
-		  </div>
-		</div>
+				  </div>
+				</div>
 
-		<!-- Text input-->
-		<div class="form-group">
-		  <label class="control-label" for="cost">Most Recent Bill</label>
-		  <div class="controls">
-			<input id="cost" name="cost" class="input-xlarge" required="" type="text">
+				<!-- Select Basic -->
+				<div class="form-group">
+				  <label class="control-label" for="month">Month of Bill</label>
+				  <div class="controls">
+					<select id="month" name="month" class="form-control" value ="1">
+					  <option value="1">January</option>
+					  <option value="2">February</option>
+					  <option value="3">March</option>
+					  <option value="4">April</option>
+					  <option value="5">May</option>
+					  <option value="6">June</option>
+					  <option value="7">July</option>
+					  <option value="8">August</option>
+					  <option value="9">September</option>
+					  <option value="10">October</option>
+					  <option value="11">November</option>
+					  <option value="12">December</option>
+					</select>
+				  </div>
+				</div>
 
-		  </div>
-		</div>
+				<!-- Hidden inputs -->
+				<input id="lng" name="lng" class="form-control" required="" type="hidden" value="">
+				<input id="lat" name="lat" class="form-control" required="" type="hidden" value="">
+				<input id="state" name="state" class="form-control" required="" type="hidden" value="">	
+				<input id="state_name" name="state_name" class="form-control" required="" type="hidden" value="">	
+				<input id="locality" name="locality" class="form-control" required="" type="hidden" value="">	
+				<input id="zipcode" name="zipcode" class="form-control" required="" type="hidden" value="">	
+				<input id="net_metering" class="form-control" type="hidden" name="net_metering" value=1>				
 
-		<!-- Select Basic -->
-		<div class="form-group">
-		  <label class="control-label" for="month">Month of Bill</label>
-		  <div class="controls">
-			<select id="month" name="month" class="input-xlarge" value ="1">
-			  <option value="1">January</option>
-			  <option value="2">February</option>
-			  <option value="3">March</option>
-			  <option value="4">April</option>
-			  <option value="5">May</option>
-			  <option value="6">June</option>
-			  <option value="7">July</option>
-			  <option value="8">August</option>
-			  <option value="9">September</option>
-			  <option value="10">October</option>
-			  <option value="11">November</option>
-			  <option value="12">December</option>
-			</select>
-		  </div>
-		</div>
-
-		<!-- Button -->
-		<div class="form-group">
-			<label class="control-label" for="submit"></label>
-			<div class="controls">
-				<button id="submitbutton" name="submitbutton" class="btn btn-primary">Submit</button>
-			</div>
-		</div>
-
-		</fieldset>
+				<!-- Button -->
+				<div class="form-group">
+					<label class="control-label" for="submit"></label>
+					<div class="controls">
+						<button id="submitbutton" name="submitbutton" class="btn btn-primary">Can I Solar?</button>
+					</div>
+				</div>				  			
+  			</div>
+  			<div class="col-md-4"></div>
+  			<div class="col-md-4"></div>
 		</form>
+		</div>
     </div>
 
     <!-- Bootstrap core JavaScript

@@ -12,7 +12,6 @@ from eia import EIA_DB
 import calendar
 import numpy as np
 import pandas as pd
-from geopy.geocoders import GoogleV3
 import json
 from r import R
 import datetime
@@ -25,6 +24,12 @@ mysql_db = "openpv"
 eia_db_url = "localhost"
 eia_db_name = "eia"
 month_lengths = [calendar.monthrange(2015,i)[1] for i in range(1,13)]
+# Construct an array to simulate declining PV panel performance over time.
+# This uses an exponential decay model to create a numpy array of derating factors for 30 years (360 months).
+# The targets are about 90% after 10 years, and about 80% after 25 years, capped at 80%.
+# Model created in R, using the coefficient estimates here. Form is y = e^(a+bx), estimated with nls()
+# These targets are currently industry standards, but can be expected to improve over time.
+pv_perf_loss_array = np.array([math.e**(-0.0053223 + -0.0089347*(i/12)) if i > 1 else 1.0 for i in range(1,361)])
 # We load this once at the beginning, because the models are large and take a while to load
 myr = R("/Users/gjm/insight/canisolar/bin/models")
 ###############################################################################
@@ -32,12 +37,6 @@ myr = R("/Users/gjm/insight/canisolar/bin/models")
 class PredictionBoundError(IndexError):
     '''
     Designed to be raised when predicted breakeven time exceeds 30 years.
-    '''
-    pass
-
-class GeocodeError(ValueError):
-    '''
-    Designed to be raised when geocoding fails.
     '''
     pass
 
@@ -82,47 +81,11 @@ def list_to_dict_pairs_x_dates(mylist):
         pairs.append({'x': datetime.datetime(years, months, 1).timestamp() * 1000, 'y': v})
     return pairs
 
-def geocode(address):
-    '''
-    Google's geocoding service can sometimes timeout. Also, it has limits:
-    2500 requests per 24 hour period.
-    5 requests per second
-    They suggest using client-side geocoding, which I would like to do.
-    TODO: convert to client-side geocoding, which would run in the browser in JavaScript and give me the results.
-    '''
-    geolocator = GoogleV3()
-    location = geolocator.geocode(address)
-    try:
-        lon = location.longitude
-        lat = location.latitude
-        print('Longitude:', lon)
-        print('Latitude:', lat)
-        
-        # Here we get human-readable location elements for display on the web page. They have default values in case they 
-        # don't exist in location.raw. 
-        state = 'NA'
-        state_name = 'NA'
-        zipcode = '0000'
-        locality = 'NA'
-        for i in location.raw['address_components']:
-            if 'administrative_area_level_1' in i['types']:
-                state = i['short_name']
-                state_name = i['long_name']
-            if 'postal_code' in i['types']:
-                zipcode = i['short_name']
-            if 'locality' in i['types']:
-                locality = i['short_name']
-    except:
-        raise GeocodeError
-    loc = {'lon': lon, 'lat': lat, 'locality': locality, 'state': state, 'state_name': state_name, 'zipcode': zipcode}
-    print(loc)
-    return loc
-
 class SolarUser(object):
     '''
     Currently, a new SolarUser should be instantiated if any of the input values change.
     '''
-    def __init__(self, lon, lat, state, cost, month, ann_demand_met=0.5, efficiency=0.15):
+    def __init__(self, lon, lat, state, cost, month, ann_demand_met=0.5, efficiency=0.15, net_metering=True):
         # Set up SolarUser instance variables
         self.lon = lon
         self.lat = lat
@@ -131,6 +94,7 @@ class SolarUser(object):
         self.month = month
         self.efficiency = efficiency
         self.ann_demand_met=ann_demand_met
+        self.net_metering = net_metering
         # This is currently a constant derating factor to account for system losses, e.g. DC to AC conversion, etc.
         # This value is obtained from http://rredc.nrel.gov/solar/calculators/pvwatts/version1/derate.cgi
         self.derate_factor = 0.77
@@ -151,7 +115,12 @@ class SolarUser(object):
         '''
         Call the appropriate methods in the appropriate order to produce all the usable output of the object.
         '''
-        self.req_cap = self.get_req_cap()
+        if self.net_metering == True:
+            self.req_cap = self.get_req_cap_nominal()
+        else:
+            # When net metering is False, we have to consider the maximum array capacity that does not reduce bills 
+            # below 0. But we also want to know what proportion of demand we were able to meet.
+            self.req_cap = self.get_req_cap_max()
         self.req_area_m2 = self.get_req_area_m2()
         self.req_area_sqft = self.get_req_area_sqft()
         self.install_cost = self.get_install_cost(self.req_cap)   
@@ -182,21 +151,60 @@ class SolarUser(object):
         '''
         ft2 = self.get_req_area_m2() * 10.7639
         print("Required array size (sqft):", ft2)
-        return ft2        
-    def get_req_cap(self):
+        return ft2
+    def get_req_cap_max(self):
         '''
-        Return the required capacity (in peak rated kW) of an installation that would meet the proportion of a SolarUser's 
+        Return the required capacity (in peak rated kW) of an installation that would meet the maximum amount of a 
+        SolarUser's annual consumption without producing negative bills in any months.
+        TODO: fix this method, I think it's broken
+        '''
+        # We need to find the month in which production exceeds consumption by the largest amount
+        #annual_prod = user.insolation['kWhpm2'] * month_lengths
+        #excess_prod = user.annual_consumption['kWh'] - annual_prod
+        # First we want to know, given each month's insolation, which month produces the most energy.
+        month_of_highest_prod = (self.insolation['kWhpm2'] * month_lengths).idxmax()
+        highest_prod = (self.insolation['kWhpm2'] * month_lengths).max()
+        # Now we need to find the corresponding consumption for the user in that month
+        highest_consump = self.annual_consumption['kWh'][month_of_highest_prod]
+        # Now see what size array would be needed to offset this amounth of consumption, given the solar hours in that month
+        max_cap_actual = highest_consump / highest_prod
+        max_cap_nominal = max_cap_actual / self.derate_factor
+        # See what capacity they asked for
+        print("The next line reports the user's desired capacity, not what we actually calculate their needed capacity to be:")
+        desired_cap_nominal = self.get_req_cap_nominal()
+        if desired_cap_nominal > max_cap_nominal:
+            print("Desired capacity exceeds maximum capacity since net_metering==False; using maximum capacity:", desired_cap_nominal, ">", max_cap_nominal)
+            nominal_kw_req = max_cap_nominal
+            # Set ann_demand_met equal to the proportion of demand we were able to meet, rather than what they wanted.
+            self.ann_demand_met = round(1.0 * (nominal_kw_req / desired_cap_nominal), 2)
+            print("self.ann_demand_met changed:", self.ann_demand_met)
+        else:
+            print("Desired capacity does not exceed maximum capacity:", desired_cap_nominal, "<=", max_cap_nominal)
+            nominal_kw_req = desired_cap_nominal
+        print("Nominal (derated) system size required (kW):", nominal_kw_req)
+        return nominal_kw_req        
+    def get_req_cap_nominal(self):
+        '''
+        Return the nominal (derated) required capacity (in peak rated kW) of an installation that would meet the proportion of a SolarUser's 
         annual consumption specified by ann_demand_met.
+        This number should be used for installation costs estimates, but NOT for production estimates.
+        For production estimates, use get_req_cap_actual()
         '''
         kwh_req_per_year = self.total_consumption * self.ann_demand_met
-        print("kWH required per year:", kwh_req_per_year)
+        print("kWH desired over the course of a year:", kwh_req_per_year)
         solar_hours_per_year = (self.insolation['kWhpm2'] * np.array(month_lengths)).sum()
-        print("Solar hours per year:", solar_hours_per_year)
+        print("Solar hours available over the course of a year:", solar_hours_per_year)
         actual_kw_req = kwh_req_per_year / solar_hours_per_year
         print("True system size required (kW):", actual_kw_req)
         nominal_kw_req = actual_kw_req / self.derate_factor
         print("Nominal (derated) system size required (kW):", nominal_kw_req)
         return nominal_kw_req
+    def get_req_cap_actual(self):
+        '''
+        Helper method that multiplies self.req_cap by derate_factor. Use this for production estimates, since 
+        it provides the actual output of the solar array.
+        '''
+        return self.req_cap * self.derate_factor
     def get_install_cost(self, cap):
         '''
         Return a dictionary with a cost estimate in dollars, along with a 90% prediction interval, 
@@ -206,10 +214,23 @@ class SolarUser(object):
         print("Estimated cost of this install:", cost['fit'])
         print("Prediction interval of cost for this install:", cost['lwr'], cost['upr'])
         return cost
+    def est_annual_prod(self):
+        '''
+        Return an estimate of kWh per month produced by an array of a given actual capacity with specified insolation.
+        '''
+        annual_prod = self.insolation['kWhpm2'] * month_lengths * self.get_req_cap_actual()
+        return annual_prod
+    def est_lifetime_prod(self):
+        '''
+        Helper method for est_annual_prod that creates 30 years of estimates, derated by exponentiall decaying 
+        performance loss over time.
+        '''
+        lifetime_prod = pd.concat([self.est_annual_prod()]*30, ignore_index=True).mul(pd.Series(pv_perf_loss_array), axis='index')   
+        return lifetime_prod
     def est_savings(self):
         '''
         Return an estimate of savings (in $) over the course of a year, given a proportion of annual demand met.
-        This methode uses forecasted prices.
+        This method uses forecasted prices.
         '''
         # I only forecast out 30 years.
         prices_forecasted = myr.predict_prices(self.state, 360)
@@ -220,18 +241,11 @@ class SolarUser(object):
         # Divide by 100 to turn cpkWh into dollars per kWh; match on index
         future_costs_before = future_consump.mul(prices_forecasted['price'] / 100, axis='index')
         future_costs_before.columns = ['dollars']
-        kwh_prod_per_year = self.annual_consumption * self.ann_demand_met
-        # Construct an array to simulate declining PV panel performance over time.
-        # This uses an exponential decay equation to create a numpy array of derating factors for 30 years (360 months).
-        # The targets are about 90% after 10 years, and about 80% after 25 years, capped at 80%. 13 is a constant in the equation below.
-        # These targets are currently industry standards, but can be expected to improve over time.
-        pv_perf_loss_array = np.array([0.8 + 0.2*math.e**(-((i/12)/13)) if i > 1 else 1.0 for i in range(1,361)])
-        # Repeat the 12-month consumption series 30 times, but now multiply by performance loss array
-        future_production = pd.concat([kwh_prod_per_year]*30, ignore_index=True).mul(pd.Series(pv_perf_loss_array), axis='index')
+        future_production = self.est_lifetime_prod()
         # Since prices are in cents, but we want figures in dollars, divide prices by 100
-        future_costs_after = future_costs_before['dollars'] - future_production['kWh'].mul(prices_forecasted['price'] / 100, axis='index')
+        future_costs_after = future_costs_before['dollars'] - future_production * (prices_forecasted['price'] / 100)
         savings = future_costs_before['dollars'] - future_costs_after
-        return savings        
+        return savings
     def est_breakeven_gross(self, cap, cost):
         '''
         Return break even time, in years, for an install of a given capacity and cost. Uses forecasted prices.
@@ -265,11 +279,13 @@ def make_graphs(user, loc):
     bills_before = user.prices['cpkWh'].mul(user.annual_consumption['kWh']).mul(0.01)
     bills_before.name = "bills_before"
     # Important: future costs are 1 minus the proportion of demand met by solar!    
-    bills_after = user.prices['cpkWh'].mul(user.annual_consumption['kWh']).mul(1 - user.ann_demand_met).mul(0.01)
+    #bills_after = user.prices['cpkWh'].mul(user.annual_consumption['kWh']).mul(1 - user.ann_demand_met).mul(0.01)
+    bills_after = bills_before - user.prices['cpkWh'].mul(0.01) * user.est_annual_prod()
     bills_after.name = "bills_after"
     
-    graph1_y1_max = round(bills_before.max()) + 1
-    graph1_y2_max = round(user.insolation.max()['kWhpm2']) + 1
+    graph1_y1_max = round(bills_before.max())
+    graph1_y1_min = 0 if bills_after.min() > 0 else round(bills_after.min())
+    graph1_y2_max = round(user.insolation.max()['kWhpm2'])
     
     # Here we create the Python objects that we will JSON serialize for the first graph
     bills_before_list = dict_to_dict_pairs(json.loads(bills_before.to_json()))
@@ -295,8 +311,6 @@ def make_graphs(user, loc):
     future_consump = pd.concat([user.annual_consumption['kWh']]*30, ignore_index=True)
     future_costs_before = future_consump.mul(future_price_list).mul(0.01)
     future_costs_before_cum_list = list(future_costs_before.cumsum().values)
-    # Important: future costs are 1 minus the proportion of demand met by solar!
-    #future_costs_after = future_consump.mul(1 - user.ann_demand_met).mul(future_price_list).mul(0.01)
     future_costs_after = future_costs_before - user.est_savings()
     # Here we add the initial install cost to the initial item
     # Don't forget to reduce the initial cost because of the 30% federal tax credit!
@@ -319,6 +333,7 @@ def make_graphs(user, loc):
     graph2_json = json.dumps(graph2_data)
     
     graph_dict = {'graph1_json': graph1_json, 'graph1_y1_max': graph1_y1_max, 
+                  'graph1_y1_min': graph1_y1_min,
                   'graph1_y2_max': graph1_y2_max, 'graph2_json': graph2_json,
                   'graph2_y1_max': graph2_y1_max}
     return graph_dict

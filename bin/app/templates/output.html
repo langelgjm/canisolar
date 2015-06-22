@@ -17,143 +17,56 @@
 		<link href="../static/css/bootstrap.min.css" rel="stylesheet">
 		<link href="../static/css/nv.d3.css" rel="stylesheet">
 		<!-- Custom styles for this template -->
-		<!-- TODO: this is not found, why not? -->
-		<link href="../templates/starter-template.css" rel="stylesheet">
+		<link href="../static/css/starter-template.css" rel="stylesheet">
 
 		<script type="text/javascript" src="../static/js/d3.v3.js"></script>
 		<script type="text/javascript" src="../static/js/nv.d3.js"></script>
-	</head>
-
-	<body>
-
-	<nav class="navbar navbar-inverse navbar-fixed-top">
-		<div class="container">
-			<div class="navbar-header">
-				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-					<span class="sr-only">Toggle navigation</span>
-					<span class="icon-bar"></span>
-					<span class="icon-bar"></span>
-					<span class="icon-bar"></span>
-				</button>
-				<a class="navbar-brand" href="#">Can I Solar?</a>
-			</div>
-			<div id="navbar" class="collapse navbar-collapse">
-				<ul class="nav navbar-nav">
-					<li class="active"><a href="#">Home</a></li>
-					<li><a href="#about">About</a></li>
-					<li><a href="#contact">Contact</a></li>
-				</ul>
-			</div><!--/.nav-collapse -->
-		</div>
-    </nav>
-
-	<br><br> 
-	
-	<!-- To create some extra space at the top -->
-	<div class="container">
-		<div class="row">
-			<br><br>
-		</div>
-	</div>
-	
-    <div class="container">
-    	<div class="row">
-		<form id="myform"  name="myform" class="form-horizontal"  action="/output" method="GET">
-		<fieldset>
-  			<div class="col-md-6">
-				<!-- Text input-->
-				<div class="form-group">
-				  <label class="control-label" for="address">Address</label>
-				  <div class="controls">
-					<input id="address" name="address" class="input-xlarge" required="" type="text" value="{{ data['address'] }}">
-
-				  </div>
-				</div>
-
-				<!-- Text input-->
-				<div class="form-group">
-				  <label class="control-label" for="cost">Most Recent Bill</label>
-				  <div class="controls">
-					<input id="cost" name="cost" class="input-xlarge" required="" type="text" value="{{ '{:.0f}'.format(data['cost']) }}">
-
-				  </div>
-				</div>
-
-				<!-- Select Basic -->
-				<div class="form-group">
-				  <label class="control-label" for="month">Month of Bill</label>
-				  <div class="controls">
-					<select id="month" name="month" class="input-xlarge" value ="{{ data['month'] }}">
-					  <option value="1">January</option>
-					  <option value="2">February</option>
-					  <option value="3">March</option>
-					  <option value="4">April</option>
-					  <option value="5">May</option>
-					  <option value="6">June</option>
-					  <option value="7">July</option>
-					  <option value="8">August</option>
-					  <option value="9">September</option>
-					  <option value="10">October</option>
-					  <option value="11">November</option>
-					  <option value="12">December</option>
-					</select>
-				  </div>
-				</div>
-
-				<!-- Button -->
-				<div class="form-group">
-					<label class="control-label" for="submit"></label>
-					<div class="controls">
-						<button id="submitbutton" name="submitbutton" class="btn btn-primary">Submit</button>
-					</div>
-				</div>				  			
-  			</div>
-  			<div class="col-md-6">
-				<div class="form-group">
-					<label class="control-label" for="ann_demand_met">Percentage of Consumption Supplied by Solar Power: <span id="slider1_span">{{ data['ann_demand_met_slider_val'] * 100 | round | int }}%</span></label>
-					<div class="controls">
-						<table>
-						<tr>
-						<td>0%</td>
-						<td>
-						<input id="ann_demand_met" type="range" name="ann_demand_met" style="width: 400px; height: 20px;" oninput="slider1_input(this.value)" onmouseup="slider_mouseUp()" min="0.0" max="1.00" step="0.01" value="{{ data['ann_demand_met_slider_val'] }}">
-						</td>
-						<td>100%</td>
-						</tr>
-						</table>
-					</div>
-				</div>
-
-				<div class="form-group">
-					<label class="control-label" for="ann_demand_met">Panel Efficiency: <span id="slider2_span">{{ data['efficiency_slider_val'] * 100 | round | int }}%</span></label>
-					<div class="controls">
-						<table>
-						<tr>
-						<td>15%</td>
-						<td>
-						<input id="efficiency" type="range" name="efficiency" style="width: 400px; height: 20px;" oninput="slider2_input(this.value)" onmouseup="slider_mouseUp()" min="0.15" max="0.20" step="0.01" value="{{ data['efficiency_slider_val'] }}">
-						</td>
-						<td>20%</td>
-						</tr>
-						</table>				
-					</div>
-				</div>  			
-  			</div>
-			</fieldset>
-			</form>
-		</div>
-
-
-		<!-- Script to ensure correct month remains selected after a submission -->
+		<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key={{data['google_maps_api_key']}}"></script>
 		<script>
-			// Get the select element
-			var el = document.getElementById("month");
-			// Select the option indicated by month (JS indices begin at 0)
-			var opt = el.options["{{ data['month'] - 1 }}"];
-			// Set the option to selected
-			opt.selected = true;
-		</script>		
-
+		function geocode() {
+			geocoder = new google.maps.Geocoder();
+			geocoder.geocode({ 'address': document.getElementById("address").value}, 
+				function(results, status) {
+				  if (status == google.maps.GeocoderStatus.OK) {
+				  	var state = '';
+				  	var state_name = '';
+				  	var zipcode = '';
+				  	var locality = '';
+				  	var arrayLength = results[0].address_components.length;
+				  	for (var i = 0; i < arrayLength; i++) {
+						if (results[0].address_components[i].types.indexOf('administrative_area_level_1') > -1) {
+							state = results[0].address_components[i].short_name;
+							state_name = results[0].address_components[i].long_name;
+						}
+						if (results[0].address_components[i].types.indexOf('postal_code') > -1)  {
+							zipcode = results[0].address_components[i].short_name;
+						}						
+						if (results[0].address_components[i].types.indexOf('locality') > -1)  {
+							locality = results[0].address_components[i].short_name;
+						}
+						if (locality === '') {
+							if (results[0].address_components[i].types.indexOf('administrative_area_level_2') > -1)  {
+								locality = results[0].address_components[i].short_name;
+							}
+						}						
+				  	}
+					document.getElementById("lat").value = results[0].geometry.location.lat();
+					document.getElementById("lng").value = results[0].geometry.location.lng();
+					document.getElementById("state").value = state;
+					document.getElementById("state_name").value = state_name;
+					document.getElementById("locality").value = locality;
+					document.getElementById("zipcode").value = zipcode;
+					document.myform.action = "/output";
+					document.myform.submit();	
+				  } else {
+				  // Write some error handling code here
+				  	console.log('GeocoderStatus Not OK');
+				  }
+				}
+			);
+		}
+  		</script>
+		
 		<!-- Script to update slider value-->
 		<script>
 			function slider1_input(val) {
@@ -179,41 +92,176 @@
 		<!-- Script to resubmit the form when a slider is moved -->
 		<script>
 			function slider_mouseUp() {
-				document.myform.action = "/output";
-				document.myform.submit();
+				geocode();
 			}
 		</script>
+	</head>
 
-    </div>
+	<body>
 
-	<div class="container">
-      <table class="table table-hover">
-		  <tr><th>Required Installation Capacity</th><th>Estimated Installation Costs in {{ data['loc']['state_name'] }}</th><th>Breakeven Time after 30% Federal Tax Credit</th></tr>
-		  <tr><td>{{ data['req_cap'] | round(1) }} kW</td>
-		  	<td>
-		  			${{ '{:,.0f}'.format(data['install_cost']['fit']) }} (low end: ${{ '{:,.0f}'.format(data['install_cost']['lwr']) }}; high end: ${{ '{:,.0f}'.format(data['install_cost']['upr']) }})
-		  	</td>
-		  	<td>
-		  			{{ '{:.0f}'.format(data['breakeven']['fit']) if data['breakeven']['fit'] != -1 else "more than 30" }} years (as short as {{ '{:.0f}'.format(data['breakeven']['lwr']) if data['breakeven']['lwr'] != -1 else "more than 30" }} years, but as long as {{ '{:.0f}'.format(data['breakeven']['upr']) if data['breakeven']['upr'] != -1 else "more than 30" }} years)
-		  	</td>
-		  </tr>
-      </table>
-
-      <table class="table table-hover">
-		  <tr>
-		  <th>Area Required (square feet)</th></tr>
-		  <tr><td>{{ data['req_area_sqft'] | round | int }}</td>
-		  </tr>
-      </table>
-
-     </div>
-
-	<div class="container">
-		<p>Click <a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}">here</a> for a list of local renewable energy incentives available in your area.</p>
-    </div>
+	<nav class="navbar navbar-inverse navbar-fixed-top">
+		<div class="container">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="#">Can I Solar?</a>
+			</div>
+			<div id="navbar" class="collapse navbar-collapse">
+				<ul class="nav navbar-nav">
+					<li class="active"><a href="/">Home</a></li>
+					<li><a href="#about">About</a></li>
+					<li><a href="#contact">Contact</a></li>
+				</ul>
+			</div><!--/.nav-collapse -->
+		</div>
+    </nav>
 
 	<div class="container">
-		<!-- custom CSS for graph -->
+	
+		<div class="row">
+			<br><br>
+			<br><br>
+		</div>
+	
+	    <div class="row">
+		<form id="myform"  role="form" name="myform" class="form-horizontal" onsubmit="event.preventDefault(); geocode()" action="/output" method="GET">
+  			<div class="col-md-4">
+				<!-- Text input-->
+				<div class="form-group">
+				  <label class="control-label" for="address">Address</label>
+				  <div class="controls">
+					<input id="address" name="address" class="form-control" required="" type="text" value="{{ data['address'] }}">
+				  </div>
+				</div>
+
+				<!-- Text input-->
+				<div class="form-group">
+				  <label class="control-label" for="cost">Most Recent Bill</label>
+				  <div class="controls">
+					<input id="cost" name="cost" class="form-control" required="" type="text" value="{{ '{:.0f}'.format(data['cost']) }}">
+
+				  </div>
+				</div>
+
+				<!-- Select Basic -->
+				<div class="form-group">
+				  <label class="control-label" for="month">Month of Bill</label>
+				  <div class="controls">
+					<select id="month" name="month" class="form-control" value ="{{ data['month'] }}">
+					  <option value="1">January</option>
+					  <option value="2">February</option>
+					  <option value="3">March</option>
+					  <option value="4">April</option>
+					  <option value="5">May</option>
+					  <option value="6">June</option>
+					  <option value="7">July</option>
+					  <option value="8">August</option>
+					  <option value="9">September</option>
+					  <option value="10">October</option>
+					  <option value="11">November</option>
+					  <option value="12">December</option>
+					</select>
+				  </div>
+				</div>
+
+				<!-- Hidden inputs -->
+				<input id="lng" name="lng" class="form-control" required="" type="hidden" value="">
+				<input id="lat" name="lat" class="form-control" required="" type="hidden" value="">
+				<input id="state" name="state" class="form-control" required="" type="hidden" value="">	
+				<input id="state_name" name="state_name" class="form-control" required="" type="hidden" value="">	
+				<input id="locality" name="locality" class="form-control" required="" type="hidden" value="">	
+				<input id="zipcode" name="zipcode" class="form-control" required="" type="hidden" value="">				
+
+				<!-- Button -->
+				<div class="form-group">
+					<label class="control-label" for="submit"></label>
+					<div class="controls">
+						<button id="submitbutton" onclick="geocode()" name="submitbutton" class="btn btn-primary">Can I Solar?</button>
+					</div>
+				</div>				  			
+  			</div>
+  			<div class="col-md-4"></div>
+  			<div class="col-md-4">
+				<div class="form-group">
+					<label class="control-label" for="ann_demand_met">Consumption Supplied by Solar: <span id="slider1_span">{{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}%</span></label>
+					<div class="controls">
+						<table>
+						<tr>
+						<td>1%</td>
+						<td>
+						<input id="ann_demand_met" class="form-control" type="range" name="ann_demand_met" style="width: 400px; height: 20px;" oninput="slider1_input(this.value)" onmouseup="slider_mouseUp()" min="0.01" max="1.00" step="0.01" value="{{ data['ann_demand_met_slider_val'] }}">
+						</td>
+						<td>100%</td>
+						</tr>
+						</table>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label class="control-label" for="ann_demand_met">Panel Efficiency: <span id="slider2_span">{{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}%</span></label>
+					<div class="controls">
+						<table>
+						<tr>
+						<td>15%</td>
+						<td>
+						<input id="efficiency" class="form-control" type="range" name="efficiency" style="width: 400px; height: 20px;" oninput="slider2_input(this.value)" onmouseup="slider_mouseUp()" min="0.15" max="0.20" step="0.01" value="{{ data['efficiency_slider_val'] }}">
+						</td>
+						<td>20%</td>
+						</tr>
+						</table>				
+					</div>
+				</div>  		
+
+				<div class="form-group">
+					<label class="control-label" for="net_metering">Net Metering</label>
+					<div class="controls">
+						<input id="net_metering" class="form-control" type="checkbox" name="net_metering" onmouseup="slider_mouseUp()" value=1 {{ data['net_metering'] }}>			
+					</div>
+				</div>  			
+					
+  			</div>
+		</form>
+		</div>
+
+		<div class="row">
+	
+			<h4><b><span id="canisolar"></span></b></h4>
+	
+			<script>
+				var el = document.getElementById("canisolar");
+				if ("{{data['breakeven']['fit']}}" < 20) {
+					el.innerHTML = "You can solar!";
+				} else {
+					el.innerHTML = "It could take a long time for you to break even on a solar installation.";		
+				}
+			</script>
+	
+			<p>
+			To meet {{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}% of your annual consumption, you would need a <b>{{ data['req_cap'] | round(1) }} kW solar installation</b>. 
+			In {{ data['loc']['state_name'] }}, an installation of this size would most likely cost <b>${{ '{:,.0f}'.format(data['install_cost']['fit']) }}</b>, 
+			although prices could vary from a low of ${{ '{:,.0f}'.format(data['install_cost']['lwr']) }} to a high of ${{ '{:,.0f}'.format(data['install_cost']['upr']) }}.
+			</p>
+
+			<p>
+			Given these installation costs, {{ data['loc']['state_name'] }}'s future electricity prices, and the current 30% federal tax credit, you could expect to break even in <b>{{ '{:.0f}'.format(data['breakeven']['fit']) if data['breakeven']['fit'] != -1 else "more than 30" }} years</b>.
+			If your installation costs were lower, you could break even in as few as {{ '{:.0f}'.format(data['breakeven']['lwr']) if data['breakeven']['lwr'] != -1 else "more than 30" }} years; 
+			if your installation costs were higher, as many as {{ '{:.0f}'.format(data['breakeven']['upr']) if data['breakeven']['upr'] != -1 else "more than 30" }} years.
+			</p>
+
+			<p>
+			Solar panels with {{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}% efficiency would require about <b>{{ data['req_area_sqft'] | round | int }} square feet of space</b>.
+			</p>
+	
+			<p>
+			<a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}">Click here</a> for a list of local renewable energy incentives available in your area that could further reduce your installation costs.
+			</p>
+		</div>
+
+		<!-- custom CSS for graphs -->
 		<style>
 			#chart svg {
 			  height: 400px;
@@ -232,7 +280,7 @@
 				</div>	
 
 				<script>
-					var myData1 = JSON.parse('{{ graph_data["graph1_json"] | safe}}');
+					var myData1 = JSON.parse('{{ graph_data["graph1_json"] | safe }}');
 					myData1[0].type = "bar";
 					myData1[0].yAxis = 1;
 					myData1[1].type = "bar";
@@ -247,8 +295,10 @@
 						chart.yAxis1.tickFormat(d3.format('$,d'));
 						chart.yAxis2.tickFormat(d3.format('.1f'));
 						
-						chart.yDomain1([0,'{{ graph_data["graph1_y1_max"]}}']);
-						chart.yDomain2([0,'{{ graph_data["graph1_y2_max"]}}']);
+						chart.yDomain1(['{{ graph_data["graph1_y1_min"]}}','{{ graph_data["graph1_y1_max"] }}']);
+						chart.yDomain2([0,'{{ graph_data["graph1_y2_max"] }}']);
+						
+						// chart.tooltip.enabled(true);
 						
 						d3.select('#chart svg')
 							.datum(myData1)
@@ -257,7 +307,6 @@
 					});
 				</script>		
 			</div>
-			
 			<div class="col-md-6">
 				<!-- graph will go here -->
 				<div id="chart2">
@@ -295,6 +344,8 @@
 						
 						chart.yDomain1([0,'{{ graph_data["graph2_y1_max"] }}']);
 						
+						//chart.interactive(true);
+						
 						d3.select('#chart2 svg')
 							.datum(myData)
 							.transition().duration(500).call(chart);
@@ -305,8 +356,17 @@
 				
 		</div>
     </div>
-</div>
 
+	<!-- Script to ensure correct month remains selected after a submission. Make sure this comes AFTER the actual element exists in the DOM.-->
+	<script>
+		// Get the select element
+		var el = document.getElementById("month");
+		// Select the option indicated by month (JS indices begin at 0)
+		var opt = el.options["{{ data['month'] - 1 }}"];
+		// Set the option to selected
+		opt.selected = true;
+	</script>		
+    
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
