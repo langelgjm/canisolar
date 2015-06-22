@@ -78,4 +78,4 @@ def canisolar_output():
     return render_template("output.html", data=data, graph_data=graph_data)
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', port=5000)
+	app.run(host='0.0.0.0', port=5000, debug=True)
