@@ -14,6 +14,7 @@ import json
 from r import R
 import datetime
 import math
+import html
 
 ###############################################################################
 # Global variables
@@ -295,8 +296,9 @@ def make_graphs(user, loc):
              'values': bills_before_list}
     dict2 = {'key': 'Bills after solar', 
              'color': '#b2df8a', 
-             'values': bills_after_list}             
-    dict3 = {'key': ''.join(['Solar hours in ', loc['locality'], 
+             'values': bills_after_list}
+    # Because sometimes locality names have apostrophes or other characters that need escaping
+    dict3 = {'key': ''.join(['Solar hours in ', html.escape(loc['locality'], quote=True), 
                              ', ', loc['state']]), 
                              'color': '#333', 
                              'values': insolation_list}    
