@@ -31,10 +31,11 @@ def canisolar_output():
     locality = request.args.get('locality')
     zipcode = request.args.get('zipcode')
     
-    if request.args.get('net_metering'):
-        net_metering = True
-    else:
-        net_metering = False
+    #if request.args.get('net_metering'):
+    #    net_metering = True
+    #else:
+    #    net_metering = False
+    net_metering = True
     
     loc = {'lon': lon, 'lat': lat, 'state': state, 'state_name': state_name, 'locality': locality, 'zipcode': zipcode}
     
