@@ -1,220 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-		<!-- TODO: write a description -->
-		<meta name="description" content="">
-		<meta name="author" content="Gabriel J. Michael">
-		<!-- TODO: include a favicon! -->
-		<link rel="icon" href="../../favicon.ico">
 
-		<title>Can I Solar?</title>
+<head>
 
-		<!-- Bootstrap core CSS -->
-		<link href="../static/css/bootstrap.min.css" rel="stylesheet">
-		<link href="../static/css/nv.d3.css" rel="stylesheet">
-		<!-- Custom styles for this template -->
-		<link href="../static/css/starter-template.css" rel="stylesheet">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Helping you decide if solar power is right for you.">
+    <meta name="author" content="Gabriel J. Michael">
 
-		<script type="text/javascript" src="../static/js/d3.v3.js"></script>
-		<script type="text/javascript" src="../static/js/nv.d3.js"></script>
-		<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key={{data['google_maps_api_key']}}"></script>
-		<script>
-		function geocode() {
-			geocoder = new google.maps.Geocoder();
-			geocoder.geocode({ 'address': document.getElementById("address").value}, 
-				function(results, status) {
-				  if (status == google.maps.GeocoderStatus.OK) {
-				  	var state = '';
-				  	var state_name = '';
-				  	var zipcode = '';
-				  	var locality = '';
-				  	var arrayLength = results[0].address_components.length;
-				  	for (var i = 0; i < arrayLength; i++) {
-						if (results[0].address_components[i].types.indexOf('administrative_area_level_1') > -1) {
-							state = results[0].address_components[i].short_name;
-							state_name = results[0].address_components[i].long_name;
-						}
-						if (results[0].address_components[i].types.indexOf('postal_code') > -1)  {
-							zipcode = results[0].address_components[i].short_name;
-						}						
-						if (results[0].address_components[i].types.indexOf('locality') > -1)  {
+    <title>Can I Solar?</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="../static/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="../static/css/stylish-portfolio.css" rel="stylesheet">
+	<link href="../static/css/nv.d3.css" rel="stylesheet">    
+
+    <!-- Custom Fonts -->
+    <link href="../static/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+	<script type="text/javascript" src="../static/js/d3.v3.js"></script>
+	<script type="text/javascript" src="../static/js/nv.d3.js"></script>    
+
+	<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key={{data['google_maps_api_key']}}"></script>
+	<script>
+	function geocode() {
+		geocoder = new google.maps.Geocoder();
+		geocoder.geocode({ 'address': document.getElementById("address").value}, 
+			function(results, status) {
+			  if (status == google.maps.GeocoderStatus.OK) {
+				var state = '';
+				var state_name = '';
+				var zipcode = '';
+				var locality = '';
+				var arrayLength = results[0].address_components.length;
+				for (var i = 0; i < arrayLength; i++) {
+					if (results[0].address_components[i].types.indexOf('administrative_area_level_1') > -1) {
+						state = results[0].address_components[i].short_name;
+						state_name = results[0].address_components[i].long_name;
+					}
+					if (results[0].address_components[i].types.indexOf('postal_code') > -1)  {
+						zipcode = results[0].address_components[i].short_name;
+					}						
+					if (results[0].address_components[i].types.indexOf('locality') > -1)  {
+						locality = results[0].address_components[i].short_name;
+					}
+					if (locality === '') {
+						if (results[0].address_components[i].types.indexOf('administrative_area_level_2') > -1)  {
 							locality = results[0].address_components[i].short_name;
 						}
-						if (locality === '') {
-							if (results[0].address_components[i].types.indexOf('administrative_area_level_2') > -1)  {
-								locality = results[0].address_components[i].short_name;
-							}
-						}						
-				  	}
-					document.getElementById("lat").value = results[0].geometry.location.lat();
-					document.getElementById("lng").value = results[0].geometry.location.lng();
-					document.getElementById("state").value = state;
-					document.getElementById("state_name").value = state_name;
-					document.getElementById("locality").value = locality;
-					document.getElementById("zipcode").value = zipcode;
-					document.myform.action = "/output";
-					document.myform.submit();	
-				  } else {
-				  // Write some error handling code here
-				  	console.log('GeocoderStatus Not OK');
-				  }
+					}						
 				}
-			);
+				document.getElementById("lat").value = results[0].geometry.location.lat();
+				document.getElementById("lng").value = results[0].geometry.location.lng();
+				document.getElementById("state").value = state;
+				document.getElementById("state_name").value = state_name;
+				document.getElementById("locality").value = locality;
+				document.getElementById("zipcode").value = zipcode;
+				document.myform.action = "/output";
+				document.myform.submit();	
+			  } else {
+			  // Write some error handling code here
+				console.log('GeocoderStatus Not OK');
+			  }
+			}
+		);
+	}
+	</script>	
+
+	<!-- Script to update slider value-->
+	<script>
+		function slider1_input(val) {
+			var el = document.getElementById("slider1_span");
+			val = Math.floor(val * 100);
+			val = val.toString();
+			val = val.concat('%')				
+			el.innerHTML = val;
 		}
-  		</script>
+	</script>
+
+</head>
 		
-		<!-- Script to update slider value-->
-		<script>
-			function slider1_input(val) {
-				var el = document.getElementById("slider1_span");
-				val = Math.floor(val * 100);
-				val = val.toString();
-				val = val.concat('%')				
-				el.innerHTML = val;
-			}
-		</script>
-
-		<!-- Script to update slider value-->
-		<script>
-			function slider2_input(val) {
-				var el = document.getElementById("slider2_span");
-				val = Math.floor(val * 100);
-				val = val.toString();
-				val = val.concat('%')
-				el.innerHTML = val;
-			}			
-		</script>
-
-		<!-- Script to resubmit the form when a slider is moved -->
-		<script>
-			function slider_mouseUp() {
-				geocode();
-			}
-		</script>
-	</head>
-
 	<body>
-
-	<nav class="navbar navbar-inverse navbar-fixed-top">
-		<div class="container">
-			<div class="navbar-header">
-				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-					<span class="sr-only">Toggle navigation</span>
-					<span class="icon-bar"></span>
-					<span class="icon-bar"></span>
-					<span class="icon-bar"></span>
-				</button>
-				<a class="navbar-brand" href="#">Can I Solar?</a>
-			</div>
-			<div id="navbar" class="collapse navbar-collapse">
-				<ul class="nav navbar-nav">
-					<li class="active"><a href="/">Home</a></li>
-					<li><a href="#about">About</a></li>
-					<li><a href="#contact">Contact</a></li>
-				</ul>
-			</div><!--/.nav-collapse -->
-		</div>
+	
+    <!-- Navigation -->
+    <a id="menu-toggle" href="#" class="btn btn-dark btn-lg toggle"><i class="fa fa-bars"></i></a>
+    <nav id="sidebar-wrapper">
+        <ul class="sidebar-nav">
+            <a id="menu-close" href="#" class="btn btn-light btn-lg pull-right toggle"><i class="fa fa-times"></i></a>
+            <li class="sidebar-brand">
+                <a href="#top"  onclick = $("#menu-close").click(); >Menu</a>
+            </li>
+            <li>
+                <a href="#top" onclick = $("#menu-close").click(); >Can I Solar?</a>
+            </li>
+            <!--
+            <li>
+                <a href="#about" onclick = $("#menu-close").click(); >About</a>
+            </li>
+            <li>
+                <a href="#services" onclick = $("#menu-close").click(); >Services</a>
+            </li>
+            -->            
+            <li>
+                <a href="#results" onclick = $("#menu-close").click(); >Results</a>
+            </li>
+            <li>
+                <a href="#contact" onclick = $("#menu-close").click(); >Contact</a>
+            </li>
+        </ul>
     </nav>
 
-	<div class="container">
-	
-		<div class="row">
-			<br><br>
-			<br><br>
-		</div>
-	
-	    <div class="row">
-		<form id="myform"  role="form" name="myform" class="form-horizontal" onsubmit="event.preventDefault(); geocode()" action="/output" method="GET">
-  			<div class="col-md-4">
-				<!-- Text input-->
-				<div class="form-group">
-				  <label class="control-label" for="address">Address</label>
-				  <div class="controls">
-					<input id="address" name="address" class="form-control" required="" type="text" value="{{ data['address'] }}">
-				  </div>
-				</div>
-
-				<!-- Text input-->
-				<div class="form-group">
-				  <label class="control-label" for="cost">Most Recent Bill</label>
-				  <div class="controls">
-					<input id="cost" name="cost" class="form-control" required="" type="text" value="{{ '{:.0f}'.format(data['cost']) }}">
-
-				  </div>
-				</div>
-
-				<!-- Select Basic -->
-				<div class="form-group">
-				  <label class="control-label" for="month">Month of Bill</label>
-				  <div class="controls">
-					<select id="month" name="month" class="form-control" value ="{{ data['month'] }}">
-					  <option value="1">January</option>
-					  <option value="2">February</option>
-					  <option value="3">March</option>
-					  <option value="4">April</option>
-					  <option value="5">May</option>
-					  <option value="6">June</option>
-					  <option value="7">July</option>
-					  <option value="8">August</option>
-					  <option value="9">September</option>
-					  <option value="10">October</option>
-					  <option value="11">November</option>
-					  <option value="12">December</option>
-					</select>
-				  </div>
-				</div>
-
-				<!-- Hidden inputs -->
-				<input id="lng" name="lng" class="form-control" required="" type="hidden" value="">
-				<input id="lat" name="lat" class="form-control" required="" type="hidden" value="">
-				<input id="state" name="state" class="form-control" required="" type="hidden" value="">	
-				<input id="state_name" name="state_name" class="form-control" required="" type="hidden" value="">	
-				<input id="locality" name="locality" class="form-control" required="" type="hidden" value="">	
-				<input id="zipcode" name="zipcode" class="form-control" required="" type="hidden" value="">				
-
-				<!-- Button -->
-				<div class="form-group">
-					<label class="control-label" for="submit"></label>
-					<div class="controls">
-						<button id="submitbutton" onclick="geocode()" name="submitbutton" class="btn btn-primary">Can I Solar?</button>
+    <!-- Header -->
+    <header id="top" class="header">
+        <div class="text-vertical-center">
+            <h1>Can I Solar?</h1>
+            <h3>Helping you decide if solar power makes sense for you.</h3>
+            <br>
+		    <div class="row">
+		    <div class="col-md-4"></div>
+			<div class="col-md-4">
+			<form id="myform"  role="form" name="myform" class="form-horizontal" onsubmit="event.preventDefault(); geocode()" action="/output" method="GET">		    
+					<!-- Text input-->
+					<div class="form-group">
+					  <label class="control-label" for="address">Address</label>
+					  <div class="controls">
+						<input id="address" name="address" class="form-control" required="" type="text" value="{{ data['address'] }}">
+					  </div>
 					</div>
-				</div>				  			
-  			</div>
-  			<div class="col-md-4"></div>
-  			<div class="col-md-4">
-				<div class="form-group">
-					<label class="control-label" for="ann_demand_met">Consumption Supplied by Solar: <span id="slider1_span">{{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}%</span></label>
-					<div class="controls">
-						<table>
-						<tr>
-						<td>1%</td>
-						<td>
-						<input id="ann_demand_met" class="form-control" type="range" name="ann_demand_met" style="width: 400px; height: 20px;" oninput="slider1_input(this.value)" onmouseup="slider_mouseUp()" min="0.01" max="1.00" step="0.01" value="{{ data['ann_demand_met_slider_val'] }}">
-						</td>
-						<td>100%</td>
-						</tr>
-						</table>
-					</div>
-				</div>
 
-				<div class="form-group">
-					<label class="control-label" for="ann_demand_met">Panel Efficiency: <span id="slider2_span">{{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}%</span></label>
-					<div class="controls">
-						<table>
-						<tr>
-						<td>15%</td>
-						<td>
-						<input id="efficiency" class="form-control" type="range" name="efficiency" style="width: 400px; height: 20px;" oninput="slider2_input(this.value)" onmouseup="slider_mouseUp()" min="0.15" max="0.20" step="0.01" value="{{ data['efficiency_slider_val'] }}">
-						</td>
-						<td>20%</td>
-						</tr>
-						</table>				
+					<!-- Text input-->
+					<div class="form-group">
+					  <label class="control-label" for="cost">Most Recent Bill</label>
+					  <div class="controls">
+						<input id="cost" name="cost" class="form-control" required="" type="text" value="{{ '{:.0f}'.format(data['cost']) }}">
+
+					  </div>
 					</div>
-				</div>  		
+
+					<!-- Select Basic -->
+					<div class="form-group">
+					  <label class="control-label" for="month">Month of Bill</label>
+					  <div class="controls">
+						<select id="month" name="month" class="form-control" value ="1">
+						  <option value="1">January</option>
+						  <option value="2">February</option>
+						  <option value="3">March</option>
+						  <option value="4">April</option>
+						  <option value="5">May</option>
+						  <option value="6">June</option>
+						  <option value="7">July</option>
+						  <option value="8">August</option>
+						  <option value="9">September</option>
+						  <option value="10">October</option>
+						  <option value="11">November</option>
+						  <option value="12">December</option>
+						</select>
+					  </div>
+					</div>
+					
+					<div class="form-group">
+						<label class="control-label" for="ann_demand_met">Consumption Supplied by Solar: <span id="slider1_span">{{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}%</span></label>
+						<div class="controls">
+							<table>
+							<tr>
+							<td>1%</td>
+							<td>
+							<input id="ann_demand_met" class="form-control" type="range" name="ann_demand_met" style="width: 400px; height: 20px;" oninput="slider1_input(this.value)" min="0.01" max="1.00" step="0.01" value="{{ data['ann_demand_met_slider_val'] }}">
+							</td>
+							<td>100%</td>
+							</tr>
+							</table>
+						</div>
+					</div>
+					
+					<!-- Hidden inputs -->
+					<input id="lng" name="lng" class="form-control" required="" type="hidden" value="">
+					<input id="lat" name="lat" class="form-control" required="" type="hidden" value="">
+					<input id="state" name="state" class="form-control" required="" type="hidden" value="">	
+					<input id="state_name" name="state_name" class="form-control" required="" type="hidden" value="">	
+					<input id="locality" name="locality" class="form-control" required="" type="hidden" value="">	
+					<input id="zipcode" name="zipcode" class="form-control" required="" type="hidden" value="">	
+					<input id="net_metering" class="form-control" type="hidden" name="net_metering" value=1>		
+					<input id="efficiency" class="form-control" type="hidden" name="efficiency" value=0.15>				
+
+					<!-- Button -->
+					<div class="form-group">
+						<label class="control-label" for="submit"></label>
+						<div class="controls">
+							<button id="submitbutton" name="submitbutton" class="btn btn-dark btn-lg">Can I Solar?</button>
+						</div>
+					</div>				  			
 
 				<!--
 				<div class="form-group">
@@ -226,12 +212,21 @@
 				-->		
 					
   			</div>
-		</form>
-		</div>
-
-		<div class="row">
+			</form>
+			</div>
+			<div class="col-md-4"></div>
+			</div>
+		</div>        
+        
+    </header>
+    
+    <section id="results" class="portfolio"><a name="results_anchor"></a>
+	<div class="container">
 	
-			<h4><b><span id="canisolar"></span></b></h4>
+		<div class="row">
+		    <div class="text-vertical-center">
+	
+			<h2><b><span id="canisolar"></span></b></h2>
 	
 			<script>
 				var el = document.getElementById("canisolar");
@@ -243,33 +238,34 @@
 			</script>
 	
 			<p>
-			To meet {{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}% of your annual consumption, you would need a <b>{{ data['req_cap'] | round(1) }} kW solar installation</b>. 
-			In {{ data['loc']['state_name'] }}, an installation of this size would most likely cost <b>${{ '{:,.0f}'.format(data['install_cost']['fit']) }}</b>, 
-			although prices could vary from a low of ${{ '{:,.0f}'.format(data['install_cost']['lwr']) }} to a high of ${{ '{:,.0f}'.format(data['install_cost']['upr']) }}.
+			A <b>{{ data['req_cap'] | round(1) }} kW solar installation</b> would meet {{ '{0:.0f}'.format(data['ann_demand_met_slider_val'] * 100) }}% of your annual consumption.
+			</p>
+			
+			<p>
+			It will most likely cost <b>${{ '{:,.0f}'.format(data['install_cost']['fit']) }}</b>, 
+			although prices could vary from ${{ '{:,.0f}'.format(data['install_cost']['lwr']) }} to ${{ '{:,.0f}'.format(data['install_cost']['upr']) }}.
 			</p>
 
 			<p>
-			Given these installation costs, {{ data['loc']['state_name'] }}'s future electricity prices, and the current 30% federal tax credit, you could expect to break even in <b>{{ '{:.0f}'.format(data['breakeven']['fit']) if data['breakeven']['fit'] != -1 else "more than 30" }} years</b>.
-			If your installation costs were lower, you could break even in as few as {{ '{:.0f}'.format(data['breakeven']['lwr']) if data['breakeven']['lwr'] != -1 else "more than 30" }} years; 
-			if your installation costs were higher, as many as {{ '{:.0f}'.format(data['breakeven']['upr']) if data['breakeven']['upr'] != -1 else "more than 30" }} years.
+			Given {{ data['loc']['state_name'] }}'s future electricity prices and the current 30% federal tax credit, you could break even in <b>{{ '{:.0f}'.format(data['breakeven']['fit']) if data['breakeven']['fit'] != -1 else "more than 30" }} years</b>.
+			Because installation costs vary, you could break even in as few as {{ '{:.0f}'.format(data['breakeven']['lwr']) if data['breakeven']['lwr'] != -1 else "more than 30" }} years, or as many as {{ '{:.0f}'.format(data['breakeven']['upr']) if data['breakeven']['upr'] != -1 else "more than 30" }} years.
 			</p>
 
 			<p>
-			Solar panels with {{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}% efficiency would require about <b>{{ data['req_area_sqft'] | round | int }} square feet of space</b>.
+			<!--{{ '{0:.0f}'.format(data['efficiency_slider_val'] * 100) }}%-->Typical efficiency panels would require about <b>{{ data['req_area_sqft'] | round | int }} square feet of space</b>.
 			</p>
-	
-			<p>
-			<a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}">Click here</a> for a list of local renewable energy incentives available in your area that could further reduce your installation costs.
-			</p>
+			</div>
 		</div>
 
 		<!-- custom CSS for graphs -->
 		<style>
 			#chart svg {
 			  height: 400px;
+			  width: 550px;
 			}
 			#chart2 svg {
 			  height: 400px;
+			  width: 550px;		  
 			}
 			.nvd3.multiChart .axis .nv-axis line { stroke: none; fill: none; }
 		</style>
@@ -292,15 +288,12 @@
 					nv.addGraph(function() {
 						var chart = nv.models.multiChart()
 							.margin({top: 30, right: 60, bottom: 50, left: 70})
-							//.color(d3.scale.category10().range());
 						chart.xAxis.tickFormat( function(d) { return d3.time.format('%b') (new Date(d)); } );
 						chart.yAxis1.tickFormat(d3.format('$,d'));
 						chart.yAxis2.tickFormat(d3.format('.1f'));
 						
 						chart.yDomain1(['{{ graph_data["graph1_y1_min"]}}','{{ graph_data["graph1_y1_max"] }}']);
 						chart.yDomain2([0,'{{ graph_data["graph1_y2_max"] }}']);
-						
-						// chart.tooltip.enabled(true);
 						
 						d3.select('#chart svg')
 							.datum(myData1)
@@ -321,22 +314,7 @@
 					myData[0].yAxis = 1;
 					myData[1].type = "line";
 					myData[1].yAxis = 1;
-					/*
-					testdata[2].type = "line";
-					testdata[2].yAxis = 1;
-					testdata[3].type = "line";
-					testdata[3].yAxis = 2;
-					testdata[4].type = "scatter";
-					testdata[4].yAxis = 1;
-					testdata[5].type = "scatter";
-					testdata[5].yAxis = 2;
-					testdata[6].type = "bar";
-					testdata[6].yAxis = 2;
-					testdata[7].type = "bar";
-					testdata[7].yAxis = 2;
-					testdata[8].type = "bar";
-					testdata[8].yAxis = 2;
-					*/
+					
 					nv.addGraph(function() {
 						var chart = nv.models.multiChart()
 							.margin({top: 30, right: 60, bottom: 50, left: 70})
@@ -345,8 +323,6 @@
 						chart.yAxis1.tickFormat(d3.format('$,d'));
 						
 						chart.yDomain1([0,'{{ graph_data["graph2_y1_max"] }}']);
-						
-						//chart.interactive(true);
 						
 						d3.select('#chart2 svg')
 							.datum(myData)
@@ -357,7 +333,23 @@
 			</div>					
 				
 		</div>
+
+		<div class="row">
+			<div class="col-md-2 col-md-offset-5">
+				<a href="#top" name="againbutton" class="btn btn-dark btn-lg center-block">Again!</a>
+				<br>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-4 col-md-offset-4">
+				<a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}" class="btn btn-dark btn-lg center-block">Find local solar incentives</a>
+			</div>
+		</div>
+		
     </div>
+    
+    </section>
 
 	<!-- Script to ensure correct month remains selected after a submission. Make sure this comes AFTER the actual element exists in the DOM.-->
 	<script>
@@ -368,13 +360,82 @@
 		// Set the option to selected
 		opt.selected = true;
 	</script>		
-    
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script> -->
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <!--<script src="../../assets/js/ie10-viewport-bug-workaround.js"></script> -->
-        
+	
+	<!-- Jump to the results anchor when the page loads -->
+	<script>window.location.hash="results_anchor"; </script>	
+
+    <!-- Footer -->
+    <footer>
+    <section id="contact" class="map">    
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-10 col-lg-offset-1 text-center">
+                    <h4><strong>Can I Solar?</strong>
+                    </h4>
+                    <p>New York, NY</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fa fa-envelope-o fa-fw"></i>  <a href="mailto:gabriel.j.michael@gmail.com">gabriel.j.michael@gmail.com</a>
+                        </li>
+                    </ul>
+                    <br>
+                    <!--
+                    <ul class="list-inline">
+                        <li>
+                            <a href="#"><i class="fa fa-facebook fa-fw fa-3x"></i></a>
+                        </li>
+                        <li>
+                            <a href="#"><i class="fa fa-twitter fa-fw fa-3x"></i></a>
+                        </li>
+                        <li>
+                            <a href="#"><i class="fa fa-dribbble fa-fw fa-3x"></i></a>
+                        </li>
+                    </ul>
+                    -->
+                    <hr class="small">
+                    <p class="text-muted">&copy; 2015 Gabriel J. Michael</p>
+                </div>
+            </div>
+        </div>
+    </section>    
+    </footer>
+
+    <!-- jQuery -->
+    <script src="../static/js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../static/js/bootstrap.min.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script>
+    // Closes the sidebar menu
+    $("#menu-close").click(function(e) {
+        e.preventDefault();
+        $("#sidebar-wrapper").toggleClass("active");
+    });
+
+    // Opens the sidebar menu
+    $("#menu-toggle").click(function(e) {
+        e.preventDefault();
+        $("#sidebar-wrapper").toggleClass("active");
+    });
+
+    // Scrolls to the selected menu item on the page
+    $(function() {
+        $('a[href*=#]:not([href=#])').click(function() {
+            if (location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') || location.hostname == this.hostname) {
+
+                var target = $(this.hash);
+                target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
+                if (target.length) {
+                    $('html,body').animate({
+                        scrollTop: target.offset().top
+                    }, 1000);
+                    return false;
+                }
+            }
+        });
+    });
+    </script>
+
   </body>
 </html>
