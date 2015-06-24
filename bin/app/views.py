@@ -158,9 +158,9 @@ def canisolar_output():
     except PolyFindError:
         error_text = "Sorry, I couldn't find that location."
         return canisolar_error(error_text)
-    except Exception:
+    except Exception as e:
         error_text = "Sorry, an error occurred. The administrator has been notified."
-        email_admin(request.query_string)
+        email_admin(' '.join([request.query_string, str(e)])
         # Here is where it would be nice to e-mail me with the URL that produced this generic error.
         return canisolar_error(error_text)        
     
