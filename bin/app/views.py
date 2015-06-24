@@ -160,10 +160,9 @@ def canisolar_output():
         return canisolar_error(error_text)
     except Exception as e:
         error_text = "Sorry, an error occurred. The administrator has been notified."
-        email_admin(' '.join([request.query_string, str(e)])
+        email_admin(' '.join([request.query_string, str(e)]))
         # Here is where it would be nice to e-mail me with the URL that produced this generic error.
         return canisolar_error(error_text)        
-    
 
     return render_template("output.html", data=data, graph_data=graph_data)
 
