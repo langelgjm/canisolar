@@ -50,7 +50,7 @@ def dict_to_dict_pairs(mydict):
     # Note that we assume the dict's keys are month numbers in the correct order!
     for k in [str(i) for i in list(range(1,13))]:
         # Quick fix to convert our local time to UTC time
-        timestamp_local = calendar.timegm(datetime.datetime(2015, int(k), 1).timetuple())
+        timestamp_local = calendar.timegm(datetime.datetime(2015, int(k), 2).timetuple())
         timestamp_utc = datetime.datetime.utcfromtimestamp(timestamp_local)
         pairs.append({'x': timestamp_utc.timestamp() * 1000, 'y':mydict[k]})
     return pairs

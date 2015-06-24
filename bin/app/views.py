@@ -55,8 +55,12 @@ def canisolar_output():
         address = request.args.get('address')
         print(address)
         cost = request.args.get('cost')
+        print(cost)
         try:
-            cost = float(cost)
+            # If there are any commas, replace them with nothing
+            # Replace dollar sign with nothing
+            # Try to convert to float
+            cost = float(cost.replace(',', '').replace('$', ''))
             if cost < 0:
                 raise ValueError
         except ValueError:
@@ -80,6 +84,13 @@ def canisolar_output():
         state_name = request.args.get('state_name')
         locality = request.args.get('locality')
         zipcode = request.args.get('zipcode')
+
+        # Construct the DSIRE URL; technology 7 is solar photovoltaics
+        if zipcode != '':
+            dsire_url = 'http://programs.dsireusa.org/system/program?zipcode={}&technology=7'.format(zipcode)
+        # If we don't have the zipcode, just use the state
+        else:
+            dsire_url = 'http://programs.dsireusa.org/system/program?state={}&technology=7'.format(state)            
         
         #if request.args.get('net_metering'):
         #    net_metering = True
@@ -139,7 +150,8 @@ def canisolar_output():
                 'install_cost': user.install_cost, 
                 'breakeven': user.breakeven,
                 'req_area_sqft': user.req_area_sqft, 
-                'net_metering': 'checked' if net_metering else ''}    
+                'net_metering': 'checked' if net_metering else '',
+                'dsire_url': dsire_url}    
     
         graph_data = make_graphs(user, loc)
     

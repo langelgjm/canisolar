@@ -49,17 +49,12 @@
             <li>
                 <a href="#top" onclick = $("#menu-close").click(); >Can I Solar?</a>
             </li>
-            <!--
-            <li>
-                <a href="#about" onclick = $("#menu-close").click(); >About</a>
-            </li>
-            <li>
-                <a href="#services" onclick = $("#menu-close").click(); >Services</a>
-            </li>
-            -->            
             <li>
                 <a href="#results" onclick = $("#menu-close").click(); >Results</a>
             </li>
+            <li>
+                <a href="#slides" onclick = $("#menu-close").click(); >How it works</a>
+            </li>            
             <li>
                 <a href="#contact" onclick = $("#menu-close").click(); >Contact</a>
             </li>
@@ -88,7 +83,7 @@
 					<div class="form-group">
 					  <label class="control-label" for="cost">Most Recent Bill</label>
 					  <div class="controls">
-						<input id="cost" name="cost" class="form-control" required="" type="text" value="{{ '{:.0f}'.format(data['cost']) }}">
+						<input id="cost" name="cost" class="form-control" required="" type="text" value="${{ '{:.0f}'.format(data['cost']) }}">
 
 					  </div>
 					</div>
@@ -288,7 +283,7 @@
 
 		<div class="row">
 			<div class="col-md-4 col-md-offset-4">
-				<a href="http://programs.dsireusa.org/system/program?zipcode={{ data['loc']['zipcode'] }}" class="btn btn-dark btn-lg center-block">Find local solar incentives</a>
+				<a href="{{ data['dsire_url'] }}" target="_blank" class="btn btn-dark btn-lg center-block">Find local solar incentives</a>
 			</div>
 		</div>
 		
@@ -309,6 +304,15 @@
 	<!-- Jump to the results anchor when the page loads -->
 	<script>window.location.hash="results_anchor"; </script>	
 
+    <!-- Slides -->
+    <section id="slides" class="map">
+    	<br>
+        </iframe>
+		<iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.slideshare.net/slideshow/embed_code/key/5F5LFjKLpEA04" width="476" height="400" frameborder="0" marginwidth="0" marginheight="0" scrolling="no"></iframe>        
+		</div>
+    </section>
+
+
     <!-- Footer -->
     <footer>
     <section id="contact" class="map">    
@@ -323,19 +327,17 @@
                         </li>
                     </ul>
                     <br>
-                    <!--
                     <ul class="list-inline">
                         <li>
-                            <a href="#"><i class="fa fa-facebook fa-fw fa-3x"></i></a>
+                            <a href="https://www.linkedin.com/in/gabrieljmichael" target="_blank"><i class="fa fa-linkedin fa-fw fa-3x"></i></a>
                         </li>
                         <li>
-                            <a href="#"><i class="fa fa-twitter fa-fw fa-3x"></i></a>
+                            <a href="https://twitter.com/gabrieljmichael" target="_blank"><i class="fa fa-twitter fa-fw fa-3x"></i></a>
                         </li>
                         <li>
-                            <a href="#"><i class="fa fa-dribbble fa-fw fa-3x"></i></a>
+                            <a href="http://www.gabrieljmichael.com" target="_blank"><i class="fa fa-dribbble fa-fw fa-3x"></i></a>
                         </li>
                     </ul>
-                    -->
                     <hr class="small">
                     <p class="text-muted">&copy; 2015 Gabriel J. Michael</p>
                 </div>
