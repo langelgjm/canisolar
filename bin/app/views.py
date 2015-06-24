@@ -28,7 +28,7 @@ def email_admin(query_string):
         server.ehlo()    
         server.login(gmail_user, gmail_password)
         #Send the mail
-        msg = "\n" + str(query_string) # The /n separates the message from the headers
+        msg = "\n" + query_string # The /n separates the message from the headers
         server.sendmail(gmail_user, gmail_user, msg)
     except Exception:
         print("Caught a generic exception in email_admin!")
@@ -158,9 +158,9 @@ def canisolar_output():
     except PolyFindError:
         error_text = "Sorry, I couldn't find that location."
         return canisolar_error(error_text)
-    except Exception as e:
+    except LookupError as e:
         error_text = "Sorry, an error occurred. The administrator has been notified."
-        email_admin(' '.join([request.query_string, str(e)]))
+        email_admin(' '.join([str(request.query_string), str(e)]))
         # Here is where it would be nice to e-mail me with the URL that produced this generic error.
         return canisolar_error(error_text)        
 

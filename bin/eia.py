@@ -111,7 +111,7 @@ class EIA_DB(object):
             cursor.execute(sql, (state, periods))
         results = cursor.fetchall()
         timestamps = [i for i in zip(*results)][2]
-        periods = pd.to_datetime(pd.Series(timestamps)).dt.to_period(freq='M')
+        periods = pd.to_datetime(pd.Series(timestamps))
         values = [i for i in zip(*results)][3]
         prices = pd.DataFrame(list(values), index=periods, columns=['cpkWh'])
         return prices
@@ -124,7 +124,7 @@ class EIA_DB(object):
             cursor.execute(sql, (state, periods))
         results = cursor.fetchall()
         timestamps = [i for i in zip(*results)][2]
-        periods = pd.to_datetime(pd.Series(timestamps)).dt.to_period(freq='M')
+        periods = pd.to_datetime(pd.Series(timestamps))
         values = [i for i in zip(*results)][3]
         sales = pd.DataFrame(list(values), index=periods, columns=['mkWh'])
         return sales
@@ -210,7 +210,7 @@ class EIA_API(object):
         data = json['series'][0]['data']
         timestamps = [i for i in zip(*data)][0]
         values = [i for i in zip(*data)][1]
-        periods = pd.to_datetime(pd.Series(timestamps), format="%Y%m").dt.to_period(freq='M')
+        periods = pd.to_datetime(pd.Series(timestamps), format="%Y%m")
         consump = pd.DataFrame(list(values), index=periods, columns=["mkWh"])
         return consump
     def get_avg_monthly_consump(self, state, periods=60):
@@ -249,7 +249,7 @@ class EIA_API(object):
         data = json['series'][0]['data']
         timestamps = [i for i in zip(*data)][0]
         values = [i for i in zip(*data)][1]
-        periods = pd.to_datetime(pd.Series(timestamps), format="%Y%m").dt.to_period(freq='M')
+        periods = pd.to_datetime(pd.Series(timestamps), format="%Y%m")
         prices = pd.DataFrame(list(values), index=periods, columns=["cpkWh"])
         return prices
     def get_price(self, month, state):
