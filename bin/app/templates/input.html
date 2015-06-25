@@ -70,7 +70,7 @@
 			<form id="myform"  role="form" name="myform" class="form-horizontal" onsubmit="event.preventDefault(); geocode()" action="/output" method="GET">		    
 					<!-- Text input-->
 					<div class="form-group">
-					  <label class="control-label" for="address">Address</label>
+					  <label class="control-label" for="address">Address, Zipcode, or City and State</label>
 					  <div class="controls">
 						<input id="address" name="address" class="form-control" required="" type="text" value="">
 					  </div>
@@ -78,7 +78,7 @@
 
 					<!-- Text input-->
 					<div class="form-group">
-					  <label class="control-label" for="cost">Most Recent Bill</label>
+					  <label class="control-label" for="cost">Most Recent Electric Bill ($)</label>
 					  <div class="controls">
 						<input id="cost" name="cost" class="form-control" required="" type="text" value="">
 
@@ -87,7 +87,7 @@
 
 					<!-- Select Basic -->
 					<div class="form-group">
-					  <label class="control-label" for="month">Month of Bill</label>
+					  <label class="control-label" for="month">Month of Most Recent Electric Bill</label>
 					  <div class="controls">
 						<select id="month" name="month" class="form-control" value="1">
 						  <option value="1">January</option>
@@ -112,7 +112,7 @@
 					</script>					
 					
 					<div class="form-group">
-						<label class="control-label" for="ann_demand_met">Consumption You Want to be Supplied by Solar: <span id="slider1_span">50%</span></label>
+						<label class="control-label" for="ann_demand_met">I want solar to save me: <span id="slider1_span">50%</span></label>
 						<div class="controls">
 							<table>
 							<tr>
