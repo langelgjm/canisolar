@@ -23,11 +23,11 @@ mysql_url = "localhost"
 mysql_db = "eia"
 
 class EIA_DB(object):
-	"""This class defines methods for interacting with the EIA MySQL tables."""
-	def __init__(self, db_url, db_name):
-		"""Instantiate an EIA_DB object.
-		Create a database and tables if necessary.
-		"""
+    """This class defines methods for interacting with the EIA MySQL tables."""
+    def __init__(self, db_url, db_name):
+        """Instantiate an EIA_DB object.
+        Create a database and tables if necessary.
+        """
         self.db_url = db_url
         self.db_name = db_name
         # charset utf8mb4 is the only proper way to handle true UTF-8 in mySQL.
@@ -49,7 +49,7 @@ class EIA_DB(object):
         # Create tables (if they don't already exist)
         self.create_tables()
     def create_db(self):
-		"""Create a MySQL database if it doesn't already exist."""
+        """Create a MySQL database if it doesn't already exist."""
         # Can't use parameters with database/table names
         # Technically insecure against the script operator
         sql = ' '.join(['''CREATE DATABASE IF NOT EXISTS ''', self.db_name,  
@@ -58,7 +58,7 @@ class EIA_DB(object):
             cursor.execute(sql)
         self.connection.commit()        
     def create_tables(self):     
-		"""Create MySQL tables if they don't already exist.""" 
+        """Create MySQL tables if they don't already exist.""" 
         prices = '''CREATE TABLE IF NOT EXISTS retail_residential_prices (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
             state CHAR(2),
@@ -78,7 +78,7 @@ class EIA_DB(object):
                 cursor.execute(sql)
         self.connection.commit()        
     def insert_price(self, state, date, price):
-		"""Insert a price for a given state and date into the appropriate MySQL table."""
+        """Insert a price for a given state and date into the appropriate MySQL table."""
         # if a variable is missing, it's an empty string; set that to None instead so that it becomes NULL in the db
         state = state if state != '' else None
         # we add the -01 to avoid illegal date strings that have day 00 in MySQL
@@ -93,9 +93,9 @@ class EIA_DB(object):
             cursor.execute(sql, (state, date, price))
         self.connection.commit()
     def insert_sale(self, state, date, sale):
-		"""Insert a 'sale' (really, consumption figure) for a given state and date into the 
-		appropriate MySQL table.
-		"""
+        """Insert a 'sale' (really, consumption figure) for a given state and date into the 
+        appropriate MySQL table.
+        """
         # if a variable is missing, it's an empty string; set that to None instead so that it becomes NULL in the db
         state = state if state != '' else None
         # we add the -01 to avoid illegal date strings that have day 00 in MySQL
@@ -170,7 +170,7 @@ class EIA_DB(object):
                                              columns = ['kWh'])
         return consump        
     def close(self):
-    	"""Close the database connection."""
+        """Close the database connection."""
         self.connection.close()
 
 class EIA_API(object):
@@ -178,7 +178,7 @@ class EIA_API(object):
     This API is rate-limited to 100,000 requests per day.
     """
     def __init__(self): 
-    	"""Instantiate an EIA_API object."""       
+        """Instantiate an EIA_API object."""       
         self.api_key = open("eia_api_key.txt", "r").readline().rstrip()
         self.cat_url = "http://api.eia.gov/category/"
         self.ser_url = "http://api.eia.gov/series/"
