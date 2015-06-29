@@ -199,3 +199,36 @@ r2.corr.mer <- function(m) {
   lmfit <-  lm(model.response(model.frame(m)) ~ fitted(m))
   summary(lmfit)$r.squared
 }
+
+################################################################################
+# Let look at the principal components of our many coefficients, to get a sense 
+# of which are outliers
+# In order to do this, the coefficients should be normalized.
+installs_numeric <- installs[,c('cost', 'size')]
+installs_numeric$cost <- log(installs_numeric$cost)
+installs_numeric$size <- log(installs_numeric$size)
+# Let's keep year as a factor since that is what the full model does and the effect of year may not be linear
+#installs_numeric$year_installed <- as.numeric(installs_numeric$year_installed)
+installs_scaled <- as.data.frame(scale(installs_numeric))
+# Add in states as a factor
+installs_scaled$state <- installs$state
+# Add in year_installed as a factor
+installs_scaled$year_installed <- installs$year_installed
+# New model with scaled/centered numeric data
+mod_fe_state_year_scaled <- lm(cost ~ size + state + year_installed, data=installs_scaled, na.action=na.omit)
+
+coefs <- coef(mod_fe_state_year_scaled)
+coefs <- coefs[order(coefs)]
+#summary(mod_fe_state_year_scaled)
+#par(las=1)
+#pdf("varimpt.pdf")
+#barplot(coefs, main="Variable importance to cost of installation (normalized)")
+library(coefplot)
+# Plot only some variables
+#mypreds <- c("size", "year_installed", "state")
+#myfactor_levels <- c("StateNH", "StateME")
+coefplot(mod_fe_state_year_scaled)
+#dev.off()
+
+plot(rep(0,length(coef(mod_fe_state_year_scaled))), coef(mod_fe_state_year_scaled), pch=19, cex=0.75, ylab="Normalized Coefficient", 
+     xaxt="")

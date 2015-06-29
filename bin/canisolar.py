@@ -3,6 +3,9 @@
 Created on Mon Jun  8 09:25:39 2015
 
 @author: gjm
+
+This file defines the main class, SolarUser, as well as some helper functions, that 
+together comprise the primary program logic.
 """
 
 from insolation import Insolation
@@ -346,10 +349,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Standard efficiency panels will produce X amount.
-# In order to meet y% of your bill, you would need a system of size Z
-# Systems of size Z recently installed in your area cost A (a per m2)
-# Given this input, you would break even in W years.
-
-# I'm reimagining the output to contain some sliders that would allow you to adjust y (and thereby Z)

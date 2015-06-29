@@ -20,8 +20,8 @@ class PolyFindError(IndexError):
     pass
 
 class Insolation(object):
-    '''
-    Return an instance of the Insolation class, which provides an interface for storing and accessing insolation (solar hours) data.
+    '''Return an instance of the Insolation class, which provides an interface for 
+    storing and accessing insolation (solar hours) data.
     '''
     def __init__(self):
         self.db = pymongo.MongoClient().canisolar
@@ -30,8 +30,8 @@ class Insolation(object):
     def __len__(self):
         return self.db.insolation.count()
     def populate(self, file):
-        '''
-        Populate MongoDB with entries consisting of a location (points comprising a polygon) and attributes (photovoltaic insolation data).
+        '''Populate MongoDB with entries consisting of a location (points 
+        comprising a polygon) and attributes (photovoltaic insolation data).
         '''
         sf = shapefile.Reader(file)
         # Records only include 15 entries, but there are 16 fields
@@ -49,13 +49,13 @@ class Insolation(object):
             self.db.insolation.insert_one(data)
         self.poly_index()
     def poly_index(self):
-        '''
-        Create a 2dsphere index. This method is broken. Instead, create an index manually in the command line client.
+        '''THIS METHOD IS BROKEN. Instead, create an index manually in the command line client.
+        Create a 2dsphere index. 
         '''
         self.db.insolation.createIndex( {"loc": "2dsphere" } )
     def poly_find(self, lon, lat):
-        '''
-        Return a list of documents whose locations (polygons) contain the point, which was passed in as (lon, lat). Note the order of arguments.
+        '''Return a list of documents whose locations (polygons) contain the point, 
+        which was passed in as (lon, lat). Note the order of arguments.
         '''
         cursor = self.db.insolation.find( {"loc": 
             {"$geoIntersects": 
@@ -76,8 +76,8 @@ class Insolation(object):
             print("WARNING: in Insolation.poly_find(): multiple matching polygons found; using the first.")
         return polys
     def get_insolation(self, lon, lat):
-        '''
-        Return a pandas DataFrame indexed by integers representing months (1-12), with insolation data in kWh / m2 / day as values
+        '''Return a pandas DataFrame indexed by integers representing months (1-12), 
+        with insolation data in kWh / m2 / day as values
         '''
         # When there are multiple matching polygons, use the first one.
         data = self.poly_find(lon, lat)[0]

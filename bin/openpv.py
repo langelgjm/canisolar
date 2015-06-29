@@ -21,7 +21,12 @@ import pandas as pd
 
 
 class OpenPV(object):
+	"""This class defines methods for accessing the (undocumented) OpenPV API, 
+	and for insertion and retrieval of this data to/from a MySQL database.
+	"""
     def __init__(self, db_url, db_name):
+		"""Instantiate an OpenPV object.
+		"""    
         # This API key is available on the OpenPV site
         self.api_key = open("openpv_api_key.txt", "r").readline().rstrip()
         self.url = "http://developer.nrel.gov/api/solar/open_pv"
@@ -49,6 +54,7 @@ class OpenPV(object):
         # Create tables (if they don't already exist)
         self.create_tables()
     def create_db(self):
+    """Create the database, if necessary."""
         # Can't use parameters with database/table names
         # Technically insecure against the script operator
         sql = ' '.join(['''CREATE DATABASE IF NOT EXISTS ''', self.db_name,  
@@ -57,6 +63,7 @@ class OpenPV(object):
             cursor.execute(sql)
         self.connection.commit()        
     def create_tables(self):
+    """Create the database tables, if necessary."""
         item_data = '''CREATE TABLE IF NOT EXISTS installs (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
             zipcode CHAR(5), 
@@ -70,31 +77,23 @@ class OpenPV(object):
             cursor.execute(item_data)
         self.connection.commit()        
     def get_api_state_data(self, state):
-        '''
-        Return a link to a CSV file for a given state.
-        '''
+        '''Return a link to a CSV file for a given state.'''
         param_dict = {"export": "true", "api_key": self.api_key, "state": state, "pagenum": 1, "nppage": 25}
         r = requests.get(self.csv_url, params=param_dict)
         return r
     def get_api_state_csv(self, state):
-        '''
-        Save a CSV file export for a given state. Will overwrite without warning!
-        '''
+        '''Save a CSV file export for a given state. Will overwrite without warning!'''
         r = self.get_csv_data(state)
         filename = "openpv_" + state + ".csv"
         f = open(filename, 'w')
         f.write(r.text)
         f.close()
     def get_api_all_csv(self):
-        '''
-        Save CSV files for all states. Will overwrite without warning!
-        '''
+        '''Save CSV files for all states. Will overwrite without warning!'''
         for state in self.states:
             self.get_api_state_csv(state)
     def insert_item_data(self, zipcode, state, size, cost, date_installed):
-        '''
-        Insert an install into the OpenPV MySQL database.        
-        '''
+        '''Insert an install into the OpenPV MySQL database.'''
         # if a variable is missing, it's an empty string; set that to None instead so that it becomes NULL in the db
         zipcode = zipcode if zipcode != '' else None
         state = state if state != '' else None
@@ -109,16 +108,16 @@ class OpenPV(object):
             cursor.execute(sql, (zipcode, state, size, cost, date_installed))
         self.connection.commit()
     def get_installs(self, state=None):
-        '''
-        Return a pandas DataFrame of installs, optionally for a given state.
+        '''Return a pandas DataFrame of installs, optionally for a given state.
+        Note that some sanity checks have been included - we exclude installs with NULL 
+        (or negative) sizes and costs, and we limit date_installed to dates after 
+        January 1, 2000, and before June 1, 2015 (when we downloaded the data).
         '''
         if state:
-            #sql = '''SELECT * FROM installs WHERE state = %s AND size IS NOT NULL AND cost IS NOT NULL AND size > 0 AND cost > 0 AND date_installed IS NOT NULL'''
             sql = '''SELECT * FROM installs WHERE state = %s AND size > 0 AND cost > 0 AND date_installed >= '2000-01-01'  AND date_installed < '2015-06-01' ORDER BY state, date_installed ASC'''
             with self.connection.cursor() as cursor:
                 cursor.execute(sql, (state))
         else:
-            #sql = '''SELECT * FROM installs WHERE size IS NOT NULL AND cost IS NOT NULL AND size > 0 AND cost > 0 AND date_installed IS NOT NULL'''
             sql = '''SELECT * FROM installs WHERE size > 0 AND cost > 0 AND date_installed >= '2000-01-01'  AND date_installed < '2015-06-01' ORDER BY state, date_installed ASC'''
             with self.connection.cursor() as cursor:
                 cursor.execute(sql)            
@@ -126,11 +125,12 @@ class OpenPV(object):
         installs = pd.DataFrame(list(results), columns=['id', 'zipcode', 'state', 'size', 'cost', 'date_installed'])
         return installs
     def close(self):
+    	"""Close the database connection."""
         self.connection.close()
 
 def main():
     pass
-# Code for populating MySQL database initially
+	# Code for populating MySQL database initially
 #    openpv = OpenPV(mysql_url, mysql_db)
 #    
 #    for filename in os.listdir(openpv_data_path):
